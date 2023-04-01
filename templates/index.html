@@ -1,0 +1,1389 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<style>
+    /*name abc... is preserved.*/
+    #div1 {
+        width: 200px;
+        position: absolute;
+        left: 0px;
+        background-color: gainsboro;
+    }
+
+    button.trigger{
+        display: none;
+    }
+    
+    #button1 {
+        position: absolute;
+        top: 5px;
+        left: 10px;
+        width: 80px;
+    }
+
+    #button2 {
+        position: absolute;
+        top: 55px;
+        left: 10px;
+        width: 80px;
+    }
+
+    #button3 {
+        position: absolute;
+        top: 105px;
+        left: 10px;
+        width: 100px;
+    }
+
+    #button_e {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 25px;
+        height: 20px;
+        padding: 1px;
+    }
+    
+    #select1{
+        position: absolute;
+        top: 56px;
+        left: 130px;
+    }
+    
+    #select2{
+        position: absolute;
+        top: 106px;
+        left: 120px;
+    }
+    
+    #div2 {
+        position: absolute;
+        left: 200px;
+        /*background-color: blue;*/
+    }
+
+    .div3 {
+        /*display: flex;*/
+        flex-wrap: wrap;
+        /*padding: 0 4px;*/
+        width: 0px;
+        height: 600px;
+        position: absolute;
+        left: 600px;
+        overflow: auto;
+    }
+    .div3:after {
+        /*content: "";*/
+        display: table;
+        clear: both;
+    }
+    
+    .div4 {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+    }
+    .div4.hidden {
+        display: none;
+    }
+
+    .toolTip {
+        position: absolute;
+        width: auto;
+        height: auto;
+        padding: 5px;
+        background-color: rgba(240, 248, 255, 0.8);
+        border: 1px solid #ccc;
+        -webkit-border-radius: 10px;
+        -moz-border-radius: 10px;
+        border-radius: 10px;
+        font-style: 12px;
+        -webkit-box-shadow: 4px 4px 10px rbga(0, 0, 0, 0.4);
+        -moz-box-shadow: 4px 4px 10px rbga(0, 0, 0, 0.4);
+        box-shadow: 4px 4px 10px rbga(0, 0, 0, 0.4);
+        /*pointer-events: none;*/
+    }
+    .toolTip.hidden {
+        display: none;
+    }
+    .toolTip p {
+        margin: 0;
+        font-family: sans-serif;
+        font-size: 16px;
+        line-height: 20px;
+    }
+    .toolTip button{
+        position: absolute;
+        left: 2px;
+        width: 100px;
+    }
+    
+    .slider {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 10px;
+        background: #ddd;
+        outline: none;
+        opacity: 0.7;
+        -webkit-transition: .2s;
+        transition: opacity .2s;
+    }
+    
+    .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #4CAF50;
+        cursor: pointer;
+    }
+    
+    .slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: #4CAF50;
+        cursor: pointer;
+    }
+
+</style>
+<body>
+
+<div id="div1" style="height:900px">
+    <button id="button1">Tooltip</button>
+    <button id="button2">Click</button>
+    <button id="button3">SelectorView</button>
+    <button id="button_e"><|></button>
+    <select id="select1">
+        <option>1</option>
+        <option>2</option>
+    </select>
+    <select id="select2">
+        <option>New</option>
+        <option>Union</option>
+        <option>Intersect</option>
+    </select>
+</div>
+<div id="div2">
+    <svg width="1550" , height="900"></svg>
+    <div class="toolTip" id="toolTip1"></div>
+</div>
+
+<div class="div3" id="div3"></div>
+<div class="div3" id="div4"></div>
+{#<iframe src="" width="0" height="0" frameborder="0" name="frame" style="display:none" ></iframe>#}
+<div class="toolTip" id="toolTip"></div>
+<div class="toolTip" id="toolTip2"></div>
+</body>
+<script src="/static/d3.js" charset="utf-8"></script>
+<script>
+    const d1 = d3.select('#div1'), d2 = d3.select('#div2'), svg = d2.select('svg');
+    const toolTip = d3.select('#toolTip'), toolTip1 = d3.select('#toolTip1'), toolTip2 = d3.select('#toolTip2');
+    const be = document.getElementById('button_e');
+    be.addEventListener('click', () => {
+        if (d1.style('left') == '0px') {
+            d1.transition().style('left', '-170px');
+            d2.transition().style('left', '30px');
+        } else {
+            d1.transition().style('left', '0px');
+            d2.transition().style('left', '200px');
+        }
+    });
+    
+    const ifTip = document.getElementById('button1');
+    const mode = document.getElementById('button2');
+    const filter = document.getElementById('select1');
+    const filter2 = document.getElementById('select2'), filter2_ = d3.select(filter2);
+    const ifSV = document.getElementById('button3');
+    
+    let comp_t = false;
+    ifSV.addEventListener('click', () => {
+        if (ifSV.style.backgroundColor == 'aqua') {
+            ifSV.style.backgroundColor = 'white';
+            comp_t = false;
+        } else {
+            ifSV.style.backgroundColor = 'aqua';
+            comp_t = true;
+        }
+    });
+    
+    let tipSwitch = [e => {
+        const idx = d3.select(e.srcElement).datum().idx;
+        let y_pos = e.clientY + document.documentElement.scrollTop;
+        let x_pos = e.clientX + document.documentElement.scrollLeft;
+        toolTip.attr('style', 'left:' + x_pos + 'px' + ';top:' + y_pos + 'px').selectAll('*').remove();
+        toolTip.append('img')
+            .attr('src', `static/img/${idx}.png`)
+            .attr('width', 100).attr('height', 100);
+        toolTip.classed('hidden', false);
+    }, () => {
+        toolTip.classed('hidden', true);
+    }];
+    ifTip.addEventListener('click', () => {
+        if(mode.textContent == 'Brush') return;
+        if (ifTip.style.backgroundColor == 'aqua') {
+            ifTip.style.backgroundColor = 'white'
+            d3.selectAll('circle')
+                .on('mouseover', null)
+                .on('mouseout', null);
+        } else {
+            ifTip.style.backgroundColor = 'aqua'
+            d3.selectAll('circle')
+                .on('mouseover', tipSwitch[0])
+                .on('mouseout', tipSwitch[1]);
+        }
+    });mode.addEventListener("click", () => {
+        if(mode.textContent == 'Brush'){
+            mode.textContent = 'Click';
+            if(typeof(brushG) != 'undefined') d3.brush().clear(brushG);
+            g0.call(brush0.extent([[0, 0], [0, 0]]));
+g1.call(brush1.extent([[0, 0], [0, 0]]));
+g2.call(brush2.extent([[0, 0], [0, 0]]));
+g3.call(brush3.extent([[0, 0], [0, 0]]));
+g4.call(brush4.extent([[0, 0], [0, 0]]));
+g5.call(brush5.extent([[0, 0], [0, 0]]));
+g6.call(brush6.extent([[0, 0], [0, 0]]));
+g7.call(brush7.extent([[0, 0], [0, 0]]));
+g8.call(brush8.extent([[0, 0], [0, 0]]));
+g9.call(brush9.extent([[0, 0], [0, 0]]));
+g10.call(brush10.extent([[0, 0], [0, 0]]));
+g11.call(brush11.extent([[0, 0], [0, 0]]));
+        }
+        else{
+            if(ifTip.style.backgroundColor == 'aqua') ifTip.click();
+            mode.textContent = 'Brush';
+            g0.call(brush0.extent(extent0));
+g1.call(brush1.extent(extent1));
+g2.call(brush2.extent(extent2));
+g3.call(brush3.extent(extent3));
+g4.call(brush4.extent(extent4));
+g5.call(brush5.extent(extent5));
+g6.call(brush6.extent(extent6));
+g7.call(brush7.extent(extent7));
+g8.call(brush8.extent(extent8));
+g9.call(brush9.extent(extent9));
+g10.call(brush10.extent(extent10));
+g11.call(brush11.extent(extent11));
+        }
+    });
+    
+    filter.addEventListener("change", () => {
+        const idx = filter.selectedIndex;
+        d3.json(`/set_click_mode/${idx}`);
+    });
+    filter2.addEventListener("change", () => {
+        const idx = filter2.selectedIndex;
+        d3.json(`/set_set_mode/${idx}`);
+    });
+    
+    let det; //debug temp variable
+    let triggers = new Array();
+    let highlighters = new Array();
+    let brushG;
+    let brush_ids = new Array();
+    let empty_r;
+    let prev_r_;
+    
+    let gva = svg.append('g').attr('transform', 'translate(200, 0)'), union_pos = 10;
+    gva.style('display', 'none');
+    gva.append('rect')
+        .attr('x', 0).attr('y', 0)
+        .attr('width', 1000).attr('height', 60)
+        .attr("fill", '#fef9ff')
+        .attr('stroke', 'black')
+        .attr('opacity', 0.5);
+    gva.append('rect')
+        .attr('x', 10).attr('y', 10)
+        .attr('width', 40).attr('height', 40)
+        .attr('fill', '#fef9ff').attr('stroke', 'black')
+        .style('stroke-dasharray', ('3, 3'))
+        .attr('opacity', 0.5);
+
+const rx0 = 350, ry0 = 150, rw0 = 100, rh0 = 100;
+const g0 = svg.append('g').attr('transform', `translate(${rx0}, ${ry0})`).attr('idx', 0);
+const trigger0 = d1.append('button').classed('trigger', true);
+const highlighter0 = d1.append('button').classed('trigger', true);
+triggers.push(trigger0);
+highlighters.push(highlighter0);
+let extent0 = [[0, 0], [rw0, rh0]];
+const brush0 = d3.brush().on("start", () => {
+        if(brushG != g0){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g0;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g0.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw0).attr('height', rh0)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush0.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g0.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/0?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/0?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger0.on('click', e => {
+    d3.json('/trigger/0').then(r => {
+        g0.selectAll('circle').remove();
+        g0.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/0?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger0.dispatch('click');
+highlighter0.on('click', e => {
+    d3.json('/highlighter/0').then(r => {
+        g0.selectAll('circle');
+    });
+});
+
+const rx1 = 350, ry1 = 300, rw1 = 100, rh1 = 100;
+const g1 = svg.append('g').attr('transform', `translate(${rx1}, ${ry1})`).attr('idx', 1);
+const trigger1 = d1.append('button').classed('trigger', true);
+const highlighter1 = d1.append('button').classed('trigger', true);
+triggers.push(trigger1);
+highlighters.push(highlighter1);
+let extent1 = [[0, 0], [rw1, rh1]];
+const brush1 = d3.brush().on("start", () => {
+        if(brushG != g1){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g1;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g1.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw1).attr('height', rh1)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush1.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g1.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/1?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/1?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger1.on('click', e => {
+    d3.json('/trigger/1').then(r => {
+        g1.selectAll('circle').remove();
+        g1.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/1?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger1.dispatch('click');
+highlighter1.on('click', e => {
+    d3.json('/highlighter/1').then(r => {
+        g1.selectAll('circle');
+    });
+});
+
+const rx2 = 350, ry2 = 450, rw2 = 100, rh2 = 100;
+const g2 = svg.append('g').attr('transform', `translate(${rx2}, ${ry2})`).attr('idx', 2);
+const trigger2 = d1.append('button').classed('trigger', true);
+const highlighter2 = d1.append('button').classed('trigger', true);
+triggers.push(trigger2);
+highlighters.push(highlighter2);
+let extent2 = [[0, 0], [rw2, rh2]];
+const brush2 = d3.brush().on("start", () => {
+        if(brushG != g2){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g2;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g2.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw2).attr('height', rh2)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush2.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g2.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/2?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/2?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger2.on('click', e => {
+    d3.json('/trigger/2').then(r => {
+        g2.selectAll('circle').remove();
+        g2.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/2?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger2.dispatch('click');
+highlighter2.on('click', e => {
+    d3.json('/highlighter/2').then(r => {
+        g2.selectAll('circle');
+    });
+});
+
+const rx3 = 350, ry3 = 600, rw3 = 100, rh3 = 100;
+const g3 = svg.append('g').attr('transform', `translate(${rx3}, ${ry3})`).attr('idx', 3);
+const trigger3 = d1.append('button').classed('trigger', true);
+const highlighter3 = d1.append('button').classed('trigger', true);
+triggers.push(trigger3);
+highlighters.push(highlighter3);
+let extent3 = [[0, 0], [rw3, rh3]];
+const brush3 = d3.brush().on("start", () => {
+        if(brushG != g3){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g3;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g3.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw3).attr('height', rh3)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush3.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g3.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/3?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/3?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger3.on('click', e => {
+    d3.json('/trigger/3').then(r => {
+        g3.selectAll('circle').remove();
+        g3.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/3?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger3.dispatch('click');
+highlighter3.on('click', e => {
+    d3.json('/highlighter/3').then(r => {
+        g3.selectAll('circle');
+    });
+});
+
+const rx4 = 600, ry4 = 150, rw4 = 100, rh4 = 100;
+const g4 = svg.append('g').attr('transform', `translate(${rx4}, ${ry4})`).attr('idx', 4);
+const trigger4 = d1.append('button').classed('trigger', true);
+const highlighter4 = d1.append('button').classed('trigger', true);
+triggers.push(trigger4);
+highlighters.push(highlighter4);
+let extent4 = [[0, 0], [rw4, rh4]];
+const brush4 = d3.brush().on("start", () => {
+        if(brushG != g4){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g4;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g4.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw4).attr('height', rh4)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush4.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g4.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/4?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/4?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger4.on('click', e => {
+    d3.json('/trigger/4').then(r => {
+        g4.selectAll('circle').remove();
+        g4.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/4?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger4.dispatch('click');
+highlighter4.on('click', e => {
+    d3.json('/highlighter/4').then(r => {
+        g4.selectAll('circle');
+    });
+});
+
+const rx5 = 600, ry5 = 300, rw5 = 100, rh5 = 100;
+const g5 = svg.append('g').attr('transform', `translate(${rx5}, ${ry5})`).attr('idx', 5);
+const trigger5 = d1.append('button').classed('trigger', true);
+const highlighter5 = d1.append('button').classed('trigger', true);
+triggers.push(trigger5);
+highlighters.push(highlighter5);
+let extent5 = [[0, 0], [rw5, rh5]];
+const brush5 = d3.brush().on("start", () => {
+        if(brushG != g5){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g5;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g5.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw5).attr('height', rh5)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush5.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g5.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/5?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/5?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger5.on('click', e => {
+    d3.json('/trigger/5').then(r => {
+        g5.selectAll('circle').remove();
+        g5.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/5?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger5.dispatch('click');
+highlighter5.on('click', e => {
+    d3.json('/highlighter/5').then(r => {
+        g5.selectAll('circle');
+    });
+});
+
+const rx6 = 850, ry6 = 150, rw6 = 100, rh6 = 100;
+const g6 = svg.append('g').attr('transform', `translate(${rx6}, ${ry6})`).attr('idx', 6);
+const trigger6 = d1.append('button').classed('trigger', true);
+const highlighter6 = d1.append('button').classed('trigger', true);
+triggers.push(trigger6);
+highlighters.push(highlighter6);
+let extent6 = [[0, 0], [rw6, rh6]];
+const brush6 = d3.brush().on("start", () => {
+        if(brushG != g6){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g6;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g6.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw6).attr('height', rh6)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush6.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g6.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/6?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/6?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger6.on('click', e => {
+    d3.json('/trigger/6').then(r => {
+        g6.selectAll('circle').remove();
+        g6.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/6?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger6.dispatch('click');
+highlighter6.on('click', e => {
+    d3.json('/highlighter/6').then(r => {
+        g6.selectAll('circle');
+    });
+});
+
+const rx7 = 30, ry7 = 150, rw7 = 50, rh7 = 50;
+const g7 = svg.append('g').attr('transform', `translate(${rx7}, ${ry7})`).attr('idx', 7);
+const trigger7 = d1.append('button').classed('trigger', true);
+const highlighter7 = d1.append('button').classed('trigger', true);
+triggers.push(trigger7);
+highlighters.push(highlighter7);
+let extent7 = [[0, 0], [rw7, rh7]];
+const brush7 = d3.brush().on("start", () => {
+        if(brushG != g7){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g7;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g7.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw7).attr('height', rh7)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush7.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g7.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/7?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/7?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger7.on('click', e => {
+    d3.json('/trigger/7').then(r => {
+        g7.selectAll('circle').remove();
+        g7.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.6)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/7?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger7.dispatch('click');
+highlighter7.on('click', e => {
+    d3.json('/highlighter/7').then(r => {
+        g7.selectAll('circle');
+    });
+});
+
+const rx8 = 30, ry8 = 230, rw8 = 50, rh8 = 50;
+const g8 = svg.append('g').attr('transform', `translate(${rx8}, ${ry8})`).attr('idx', 8);
+const trigger8 = d1.append('button').classed('trigger', true);
+const highlighter8 = d1.append('button').classed('trigger', true);
+triggers.push(trigger8);
+highlighters.push(highlighter8);
+let extent8 = [[0, 0], [rw8, rh8]];
+const brush8 = d3.brush().on("start", () => {
+        if(brushG != g8){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g8;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g8.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw8).attr('height', rh8)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush8.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g8.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/8?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/8?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger8.on('click', e => {
+    d3.json('/trigger/8').then(r => {
+        g8.selectAll('circle').remove();
+        g8.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.6)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/8?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger8.dispatch('click');
+highlighter8.on('click', e => {
+    d3.json('/highlighter/8').then(r => {
+        g8.selectAll('circle');
+    });
+});
+
+const rx9 = 850, ry9 = 150, rw9 = 100, rh9 = 100;
+const g9 = svg.append('g').attr('transform', `translate(${rx9}, ${ry9})`).attr('idx', 9);
+const trigger9 = d1.append('button').classed('trigger', true);
+const highlighter9 = d1.append('button').classed('trigger', true);
+triggers.push(trigger9);
+highlighters.push(highlighter9);
+let extent9 = [[0, 0], [rw9, rh9]];
+const brush9 = d3.brush().on("start", () => {
+        if(brushG != g9){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g9;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g9.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw9).attr('height', rh9)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush9.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g9.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/9?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/9?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger9.on('click', e => {
+    d3.json('/trigger/9').then(r => {
+        g9.selectAll('circle').remove();
+        g9.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.6)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/9?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger9.dispatch('click');
+highlighter9.on('click', e => {
+    d3.json('/highlighter/9').then(r => {
+        g9.selectAll('circle');
+    });
+});
+
+const rx10 = 100, ry10 = 150, rw10 = 100, rh10 = 100;
+const g10 = svg.append('g').attr('transform', `translate(${rx10}, ${ry10})`).attr('idx', 10);
+const trigger10 = d1.append('button').classed('trigger', true);
+const highlighter10 = d1.append('button').classed('trigger', true);
+triggers.push(trigger10);
+highlighters.push(highlighter10);
+let extent10 = [[0, 0], [rw10, rh10]];
+const brush10 = d3.brush().on("start", () => {
+        if(brushG != g10){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g10;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g10.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw10).attr('height', rh10)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush10.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g10.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/10?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/10?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger10.on('click', e => {
+    d3.json('/trigger/10').then(r => {
+        g10.selectAll('circle').remove();
+        g10.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/10?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger10.dispatch('click');
+highlighter10.on('click', e => {
+    d3.json('/highlighter/10').then(r => {
+        g10.selectAll('circle');
+    });
+});
+
+const rx11 = 100, ry11 = 300, rw11 = 100, rh11 = 100;
+const g11 = svg.append('g').attr('transform', `translate(${rx11}, ${ry11})`).attr('idx', 11);
+const trigger11 = d1.append('button').classed('trigger', true);
+const highlighter11 = d1.append('button').classed('trigger', true);
+triggers.push(trigger11);
+highlighters.push(highlighter11);
+let extent11 = [[0, 0], [rw11, rh11]];
+const brush11 = d3.brush().on("start", () => {
+        if(brushG != g11){
+            if(typeof(brushG) != "undefined") d3.brush().clear(brushG);
+            brushG = g11;
+        }
+    })
+    .on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            //...
+        }
+        else{
+            r = empty_r;
+        }
+    });
+    
+g11.append('rect')
+    .classed('border', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', rw11).attr('height', rh11)
+    .attr("fill", 'none')
+    .attr('stroke', 'gray')
+    .on('click', e => {
+        //r = [];
+    });
+        brush11.on("end", e => {
+        if(e.selection){
+            const [[x0, y0], [x1, y1]] = e.selection;
+            brush_ids = [];
+            g11.selectAll("circle")
+                .each(d => {
+                    const cx = d.cx, cy = d.cy, pos = brush_ids.indexOf(d.idx);
+                    if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+                        if(pos == -1) brush_ids.push(d.idx);
+                    }
+                    else if(pos != -1) brush_ids.splice(pos, 1);
+                });  
+            d3.json(`/brush/11?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+        else{
+            brush_ids = [];
+            d3.json(`/brush/11?value=${brush_ids}`)
+                .then(r => {
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+        }
+    });
+trigger11.on('click', e => {
+    d3.json('/trigger/11').then(r => {
+        g11.selectAll('circle').remove();
+        g11.selectAll('circle')
+            .data(r).enter().append('circle')
+            .attr('r', d => d.r)
+            .attr('cx', d => d.cx)
+            .attr('cy', d => d.cy) 
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.3)
+            //.attr('opacity', d => d.opacity)
+            .on('click', e => {
+                const idx = d3.select(e.srcElement).datum().idx;
+                d3.json(`/click/11?value=${idx}`).then(r => {
+                    console.log(triggers.length);
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                });
+            });
+    });
+});
+trigger11.dispatch('click');
+highlighter11.on('click', e => {
+    d3.json('/highlighter/11').then(r => {
+        g11.selectAll('circle');
+    });
+});
+
+const w0 = d2.append('div').classed('div4', true).style('position', 'absolute');
+w0.style('width', '100px')
+    .style('height', '20px')
+    .style('left', '100px')
+    .style('top', '20px');
+        
+w0.append('input')
+    .attr('type', 'range')
+    .attr('min', 0)
+    .attr('max', 4)
+    .attr('value', 0)
+    .classed('slider', true)
+    .attr('id', 'w0')
+    .style('width', '100%')
+    .style('height', '100%')
+    .on('input', e => {
+        const value = document.getElementById('w0').value;
+        d3.json(`/click/0?value=${value}`).then(r => {
+            for(let i of r) triggers[i].dispatch('click');
+        });
+    });
+w0.append('button')
+    .text('Play')
+    .style('position', 'absolute')
+    .style('width', '40px')
+    .style('height', '21px')
+    .style('left', '110px')
+    .style('top', '1.5px')
+    .on('click', e => {
+        const s = document.getElementById('w0');
+        for(let i=0; i<=4; i++){
+            s.value = i;
+            d3.select(s).dispatch('input');
+        }
+    });
+        
+        //mode.click();
+        empty_r={};
+        filter2.selectedIndex = 0;
+        filter2_.dispatch('change');
+</script>

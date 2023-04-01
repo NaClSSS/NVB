@@ -1,0 +1,63 @@
+<html>
+<head>
+    <meta charset="utf-8">
+	<meta http-equiv="Access-Control-Allow-Origin" content="*" />
+    <title>M</title>
+</head>
+<style>
+    .t{
+        display: none;
+    }
+</style>
+<script src="https://d3js.org/d3.v7.min.js" charset="utf-8"></script>
+<body>
+<button class="t" onclick="f()" id="fa">1</button>
+<label>
+    <input type="text" onchange="f()">
+</label>
+<p class="t">aa</p>
+
+</body>
+
+<script>
+    function f(){
+        console.log('a');
+    }
+    document.getElementById('fa').click();
+    var temp;
+    let width = 2000;
+    let height = 1200;
+    let svg = d3.select("body")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+    let brushCell;
+    for (let j = 0; j < 3; j++) {
+        let rx = 400 * j, ry = 100, rw = 300, rh = 300;
+        let g = svg.append("g")
+            .attr("x", rx).attr("y", ry)
+            .attr("width", rw).attr("height", rh);
+
+        g.append("rect")
+            .attr("x", rx).attr("y", ry)
+            .attr("width", rw).attr("height", rh)
+            .attr("fill", "white")
+            .attr("stroke", "black");
+
+        g.call(d3.brush()
+            .extent([[rx,ry], [rx+rw,ry+rh]])
+            .on("start", function (){
+                d3.select(brushCell).call(d3.brush().clear);
+                brushCell = this;
+            })
+            .on("brush", function ({selection}, [i, j]){
+
+            })
+            .on("end", function ({selection}){
+
+            })
+        );
+    }
+</script>
+
+</html>

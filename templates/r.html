@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Drag and Zoom Example</title>
+</head>
+<body>
+    <svg width="1000" height="500">
+
+    </svg>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+</body>
+<script>
+        const svg = d3.select("svg");
+        const g = svg.append('g').attr('transform', 'translate(100, 100)');
+        const extent = [[0, 0], [100, 100]];
+        const brush = d3.brush();
+        const line = d3.line();
+        g.append('rect').attr('x', 0).attr('y', 0)
+            .attr('width', 100).attr('height', 100)
+            .attr('fill', 'none').attr('stroke', 'black');
+        g.selectAll('path')
+            .data([[[0, 100], [100, 0]], [[100, 100], [0, 0]]]).enter().append('path')
+            .attr('stroke', 'black')
+            .attr('d', d => line(d))
+            .attr('fill', 'none');
+        g.call(brush.extent(extent));
+    </script>
+</html>
