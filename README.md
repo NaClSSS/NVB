@@ -1,11 +1,55 @@
 # How to Use NVB
-To use NVB, first try running `mlp.py` to see how it works.
+
+To use NVB, first run `mlp.py` and see how it works.
 
 # What is NVB
-NNVisBuilder is a programming toolkit.
-Our design goal is to enable users to easily and quickly build interactive visual analytic interfaces for various neural networks.
 
-We will provide some templates for of interfaces, but this is not part of the core of NNVisBuilder. NNVisBuilder is like a visualization system that helps you build interfaces. You can design your own interfaces.
+NNVisBuilder is a programming toolkit designed to enable users to easily and quickly build interactive visual analytic interfaces for various neural networks. While we provide some interface templates, they are not a core part of NNVisBuilder. NNVisBuilder is a visualization system that helps users build their own interfaces.
+
+# How to Code with NVB to Build Your Own Interface
+
+NVB is like a visual analytics framework, but its visualization is based on views. To add a view to the interface, simply create an object for that type of view. For example:
+
+`view = ScatterPlot(data, [100, 100], [200, 200])`
+
+Generally, views need to be bound to data, which specifies how elements are displayed within the view. For instance, a scatter plot consists of a collection of points, and its first parameter specifies the positions of those points. In addition to positions, the ScatterPlot can also specify colors, sizes, etc., all of which can be defined through data.
+
+Furthermore, users can specify additional view information such as position and size. For example, the above statement specifies a position of `[100, 100]` and a size of `[200, 200]`.
+
+The binding between views and data in NVB is dynamic. As data changes, views change as well, providing the foundation for NVB's interactive functionality.
+
+If you want to implement some interactive functionality in NVB, you don't need to write complex code to modify the interface. Simply modify the data, and the associated views will update accordingly.
+
+NVB's views require data to be wrapped in a Data class to achieve dynamic binding. For instance, if `a` is a numpy array representing all the points' positions, wrap it using:
+
+`data = Data(a)`
+
+and then pass it to the view. Not all views require wrapped data, and users may choose not to wrap data if they don't need dynamic relationships.
+
+Defining interactive methods is similar to JavaScript:
+
+`view.onclick(f)`
+
+Here, `f` is the event handler function, and the function's parameter depends on the specific view. Some generalities exist to help users remember, while some flexibility exists to facilitate specialized design.
+
+Therefore, data, views, and interactions are the three basic modules of NVB. To use NVB, users need to prepare data, define views, and specify interactions.
+
+NVB has some specific designs for these three modules:
+
+1. Data:
+2. Views:
+3. Interactions:
+
+As a toolkit specialized for neural networks, NNVisBuilder is designed to:
+
+1. Abstract the interface representation model, which summarizes the data processing and interaction processes of the interface as a flow chart
+2. Encapsulate the process of obtaining commonly used data for neural network visualization, such as network activation, gradients, and connections
+
+Further explanations, detailed instructions, user manuals, and API documents will be provided in the future.
+
+
+
+
 
 # How to code with NVB to build your own interface
 NVB就像可视分析框架，但是它的可视化是以视图为基本单位。你想要往界面上添加什么视图，就创建一个那种视图的对象就好。
