@@ -48,6 +48,7 @@ NVB has some designs in three modules, and these designs based on our data abstr
    - The specific attributes of the views can be specified as an NVB data, which can achieve dynamic binding. If dynamic binding is not needed, the value of the attribute can be directly specified, and there is no need to wrap the value as an NVB data.
    - Users only need to specify the attributes of the views, and the system will automatically generate the visualization. Users do not need to care about the visualization aspect or write visualization code.
    - If users need to customize the view, they can define their own view based on NVB specifications (currently referring to existing view classes), and then use it like using an existing view.
+   - NVB also provides some widgets to help users build control panels, which are generally similar to views, but do not require binding data.
 3. Interaction:
    - Based on dynamic binding, users can achieve all types of interaction by modifying the data, transformations or selection information corresponding to other views in the event handling of the interaction. This is **the most fundamental difference in using NVB for coding**, based on our data abstraction.
    - Selection information is another factor that affects the display result of the views, usually represented as a selected subset of a certain dimension of the data. For example, a heatmap corresponds to a two-dimensional tensor data, and one row (multiple rows) or one column (multiple columns) can be selected.
@@ -108,6 +109,7 @@ NVB在三个模块上分别有一些设计，这些基于我们的数据抽象�
    - 视图的特有属性可以指定为一个NVB数据，这样可以实现动态绑定；如果不需要动态绑定关系，也可以直接指定属性的值，不需要将值包装为NVB数据。
    - 用户只需要指定视图的属性，系统会自动生成可视化，用户无需关心可视化方面的内容，无需编写可视化的代码。
    - 如果用户需要自定义视图，可以基于NVB的规范（暂时参照已有视图类获取）来定义自己的视图，然后像使用原有视图一样使用它。
+   - NVB同样提供一些小控件帮助用户构建控制面板，这些小控件的使用总体上和视图相似，但是不需要绑定数据。
 3. 交互：
    - 基于动态绑定，用户可以通过在交互处理事件中修改其他视图对应的数据、变换或选中信息来实现所有的交互方式。这是基于我们的数据抽象得出的**使用NVB编码时最核心的不同**。
    - 选中信息是影响视图显示结果的另一个因素，通常表示为数据的某个维度的选中子集。例如一个热力图对应二维张量数据，可以选中其中的一行（多行）或一列（多列）。
