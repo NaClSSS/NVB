@@ -29,11 +29,40 @@ NVB's views require data to be wrapped in a Data class to achieve dynamic bindin
 
 and then pass it to the view. Not all views require wrapped data, and users may choose not to wrap data if they don't need dynamic relationships.
 
+## Interaction
+
 Defining interactive methods is similar to JavaScript:
 
 `view.onclick(f)`
 
-Here, `f` is the event handler function, and the function's parameter depends on the specific view. Some generalities exist to help users remember, while some flexibility exists to facilitate specialized design.
+The f here is the event handler function of the following form:
+
+```def f(value):
+   data.update(value)
+```
+What `f`'s argument takes depends on the specific view. There will be some commonality for ease of use and some flexibility for specialized designs.
+
+Specifically, `f` allows for different numbers of arguments to be passed. For example, in a HeatMap, if the Selector is set to select one or more rows (i.e., selecting on the first dimension of the tensor), then value will be the row number or a list of row numbers. If the Selector is set to select specific points (such as the point at the first row and second column <1,2>) or a list of points, then the definition of f is a function that accepts two arguments, and these two arguments will represent the x and y coordinates of the selected point. Sometimes, for the same Selector, `f` can also be defined to accept different numbers of arguments, depending on the specific view. These details will be reflected in the user manual later.
+
+In `f`, data or some transformations can be modified. If the types of value and data are the same (the tensor order is the same), calling update will directly replace the value with the corresponding value in value. Otherwise, if data is a vector and value is a scalar, if value is in data, it will be removed, otherwise it will be added. This is a convenience we provide based on practice.
+
+Views can define a Highlighter to specify how to respond to selected information. For example, for a scatter plot, it can be specified to enlarge the selected point or modify the color of the point. NVB includes the selected information in the Highlighter of the view, so if two views are bound to the same Highlighter, their selections will be passed on.
+
+NVB defines default event handling functions for views. This function will use the value passed to f to modify the selection information of the view's Highlighter. At the same time, NVB allows mapping functions to be added for selected information. When the selected information changes, all corresponding mapping functions will be called automatically. For example, the following code:
+```
+def f(value):
+    highlighter = view.highlighter
+    highlighter.update(value)
+    g(highlighter.value)
+view.on_click(f)
+```
+And the code:
+```
+view.highlighter.add_mapping(g)
+```
+have the same effect.
+
+## Structure
 
 Therefore, data, views, and interactions are the three basic modules of NVB. To use NVB, users need to prepare data, define views, and specify interactions.
 
@@ -65,10 +94,13 @@ As a toolkit specialized for neural networks, NNVisBuilder is designed to:
 
 Further explanations, detailed instructions, user manuals, and API documents will be provided in the future.
 
-
-
-
-
+\
+\
+\
+\
+\
+\
+以上英文都是从中文翻译过去的
 # How to code with NVB to build your own interface
 NVB就像可视分析框架，但是它的可视化是以视图为基本单位。你想要往界面上添加什么视图，就创建一个那种视图的对象就好。
 例如：
@@ -90,12 +122,43 @@ NVB的视图上使用的数据需要用一个Data类进行包装，才能实现�
 
 将它包装，然后传给视图就可以了。当然，不是所有视图使用的数据都需要包装，如果你不需要这种动态关系，你可以不包装。
 
+## Interaction
+
 定义交互的方法就像js一样，
 
 `view.onclick(f)`
 
-这里f就是事件处理函数，f的参数传入的什么取决于具体的视图。会有一些共性，方便用户记住，也会有一些灵活性，方便特化设计。
+这里的`f`是类似以下形式的事件处理函数：
 
+```
+def f(value):
+   data.update(value)
+```
+
+`f`的参数传入的什么取决于具体的视图。会有一些共性，方便用户记住，也会有一些灵活性，方便特化设计。
+
+具体而言，`f`允许传入不同数量的参数。例如，在HeatMap中，如果指定Selector为选中一（多）行（也就是在张量的第一维度上选择），那么value会是行数或者行数的列表。如果Selector指定为选择特定的点（例如第一行第二列<1,2>）或点的列表，那么定义f是接受两个参数的函数，这两个参数会分别表示选中点的x和y坐标。 有时候，对于同一种Selector，也可以定义接受不同数量参数的`f`，这取决于具体的视图，后续这些细节会在用户手册中体现。
+
+在f中可以对数据或某些变换进行修改。如果value和data的类型相同（张量阶数相同），调用update会直接将值替换为value对应值。否则，如果data是向量，value是标量，那么如果value在data中，就会被删除，反之会被加入。这是我们根据实践提供的一个方便。
+
+视图可以定义Highlighter来指定其如何对选中信息进行响应。例如，对于散点图，可以指定放大选中点，或修改点的颜色。NVB将选中信息包含在视图的Highlighter中，这样如果两个视图绑定同一个Highlighter，那么他们的选中会传递。
+
+NVB为视图定义了默认的事件处理函数，这个函数会使用上面传给f的value修改视图的Highlighter的选中信息。同时，NVB允许为选中信息添加映射函数，当选中信息发生变化时，对应的所有映射函数会自动被调用。例如下面的代码：
+```angular2html
+def f(value):
+    highlighter = view.highlighter
+    highlighter.update(value)
+    g(highlighter.value)
+view.on_click(f)
+```
+
+和代码
+```angular2html
+   view.highlighter.add_mapping(g)
+```
+效果是相同的。
+
+## Structure
 所以数据、视图、交互三个模块就是NVB的基础结构。如果你要使用NVB，你的编码方式就是准备好数据，然后定义视图，然后定义交互。
 
 NVB在三个模块上分别有一些设计，这些基于我们的数据抽象的设计是我们的主要贡献，或者说是使得NVB区别于其他可视化框架（在构建神经网络可视分析界面上）的主要不同之处：
@@ -124,4 +187,3 @@ NVB作为专门为神经网络设计的工具包，这个专门体现在：
 2. 我们为神经网络可视化时常用的数据封装了获取过程，例如网络激活，梯度，连接等
 
 具体的介绍和详细说明和用户手册和api文档将在后续慢慢补充。。。
-
