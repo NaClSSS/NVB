@@ -100,6 +100,7 @@ Further explanations, detailed instructions, user manuals, and API documents wil
 \
 \
 \
+The Chinese below corresponds to the English above
 以上英文都是从中文翻译过去的
 # How to code with NVB to build your own interface
 NVB就像可视分析框架，但是它的可视化是以视图为基本单位。你想要往界面上添加什么视图，就创建一个那种视图的对象就好。
