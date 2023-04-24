@@ -3,7 +3,7 @@ https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s
 
 # How to Use NVB
 
-To use NVB, first run `mlp.py` and see how it works.
+To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the relevant dataset will be automatically downloaded first. If you run `lstmvis.py`, you need to manually download eng-fra.txt from the data folder at https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s and place it in the data folder, and download encoder.pth and decoder.pth from the model folder and place them in the model folder.
 
 # What is NVB
 
