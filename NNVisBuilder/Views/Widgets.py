@@ -76,10 +76,13 @@ w{self.idx}.append('button')
     .style('top', '1.5px')
     .on('click', e => {{
         const s = document.getElementById('w{self.idx}');
-        for(let i={self.range[0]}; i<={self.range[1]}; i++){{
+        let i = {self.range[0]};
+        let intervalId = setInterval(() => {{
             s.value = i;
             d3.select(s).dispatch('input');
-        }}
+            i++;
+            if(i > {self.range[1]}) clearInterval(intervalId);
+        }}, 800);
     }});
         """)
 
