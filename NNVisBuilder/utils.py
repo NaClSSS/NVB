@@ -6,6 +6,13 @@ import pandas as pd
 # from NNVisBuilder.Views import View
 from backend import Container
 from NNVisBuilder.GlobalVariables import *
+from sklearn.manifold import TSNE
+
+t_obj = TSNE()
+
+
+def tsne(value):
+    return t_obj.fit_transform(value)
 
 
 class MSelector:
@@ -75,7 +82,8 @@ class MSelector:
         if bar == '0':
             i = int(info.get('i'))
             self.set_modes[i] = 1 - self.set_modes[i]
-            return json.dumps(selector_config['op_intersect'] if self.set_modes[i] == 1 else selector_config['op_union'])
+            return json.dumps(
+                selector_config['op_intersect'] if self.set_modes[i] == 1 else selector_config['op_union'])
         else:
             View.set_mode += 1
             if View.set_mode == 3:
@@ -434,7 +442,7 @@ def head(f, views=None, size=[2000, 1200]):
     button.trigger{
         display: none;
     }
-    
+
     #button1 {
         position: absolute;
         top: 5px;
@@ -464,19 +472,19 @@ def head(f, views=None, size=[2000, 1200]):
         height: 20px;
         padding: 1px;
     }
-    
+
     #select1{
         position: absolute;
         top: 56px;
         left: 130px;
     }
-    
+
     #select2{
         position: absolute;
         top: 106px;
         left: 120px;
     }
-    
+
     #div2 {
         position: absolute;
         left: 200px;
@@ -498,7 +506,7 @@ def head(f, views=None, size=[2000, 1200]):
         display: table;
         clear: both;
     }
-    
+
     .div4 {
         position: absolute;
         top: 0px;
@@ -538,7 +546,7 @@ def head(f, views=None, size=[2000, 1200]):
         left: 2px;
         width: 100px;
     }
-    
+
     .slider {
         -webkit-appearance: none;
         width: 100%;
@@ -549,7 +557,7 @@ def head(f, views=None, size=[2000, 1200]):
         -webkit-transition: .2s;
         transition: opacity .2s;
     }
-    
+
     .slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
@@ -558,7 +566,7 @@ def head(f, views=None, size=[2000, 1200]):
         background: #4CAF50;
         cursor: pointer;
     }
-    
+
     .slider::-moz-range-thumb {
         width: 20px;
         height: 20px;
@@ -609,13 +617,13 @@ def head(f, views=None, size=[2000, 1200]):
             d2.transition().style('left', '200px');
         }
     });
-    
+
     const ifTip = document.getElementById('button1');
     const mode = document.getElementById('button2');
     const filter = document.getElementById('select1');
     const filter2 = document.getElementById('select2'), filter2_ = d3.select(filter2);
     const ifSV = document.getElementById('button3');
-    
+
     let comp_t = false;
     ifSV.addEventListener('click', () => {
         if (ifSV.style.backgroundColor == 'aqua') {
@@ -626,7 +634,7 @@ def head(f, views=None, size=[2000, 1200]):
             comp_t = true;
         }
     });
-    
+
     let tipSwitch = [e => {
         const idx = """ + select_this + """.datum().idx;
         let y_pos = e.clientY + document.documentElement.scrollTop;
@@ -665,7 +673,7 @@ def head(f, views=None, size=[2000, 1200]):
             {newline.join([v.bind_brush() for v in views])}
         }}
     }});
-    
+
     filter.addEventListener("change", () => {{
         const idx = filter.selectedIndex;
         d3.json(`/set_click_mode/${{idx}}`);
@@ -674,7 +682,7 @@ def head(f, views=None, size=[2000, 1200]):
         const idx = filter2.selectedIndex;
         d3.json(`/set_set_mode/${{idx}}`);
     }});
-    
+
     let det; //debug temp variable
     let triggers = new Array();
     let highlighters = new Array();
@@ -682,7 +690,7 @@ def head(f, views=None, size=[2000, 1200]):
     let brush_ids = new Array();
     let empty_r;
     let prev_r_;
-    
+
     let gva = svg.append('g').attr('transform', 'translate(200, 0)'), union_pos = 10;
     gva.style('display', 'none');
     gva.append('rect')
