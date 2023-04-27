@@ -2,6 +2,8 @@
 
 To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the relevant dataset will be automatically downloaded first. If you run `lstmvis.py`, you need to manually download eng-fra.txt from the data folder at https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s and place it in the data folder, and download encoder.pth and decoder.pth from the model folder and place them in the model folder.
 
+(When selecting a dataset in the `mlp.py` interface, you need to click on the circle on the left side to trigger, and it will be optimized in the future.)
+
 # What is NVB
 
 NNVisBuilder is a programming toolkit designed to enable users to easily and quickly build interactive visual analytic interfaces for various neural networks. While we provide some interface templates, they are not a core part of NNVisBuilder. NNVisBuilder is a visualization system that helps users build their own interfaces.
@@ -108,6 +110,8 @@ The Chinese below corresponds to the English above
 
 # 开始使用NVB
 要使用NVB，请首先运行`mlp.py`并查看其工作原理。如果运行`cnn.py`，则相关数据集将自动下载。如果运行`lstmvis.py`，则需要手动从https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s 的data文件夹中下载eng-fra.txt并将其放置在data文件夹中，并从model文件夹下载encoder.pth和decoder.pth并将它们放置在model文件夹中。
+
+（在`mlp.py`的界面左边点击选择数据集时，需要点击到散点上才能触发事件，后续将会优化）
 
 # How to code with NVB to build your own interface
 NVB就像可视分析框架，但是它的可视化是以视图为基本单位。你想要往界面上添加什么视图，就创建一个那种视图的对象就好。
