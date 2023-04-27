@@ -8,7 +8,8 @@ import json
 
 class View:
     f = None
-    t = None
+    views = []
+    widgets = []
     update_list = []
     highlight_list = []
     idx = 0
@@ -142,7 +143,7 @@ class View:
         if data is not None:
             # if isinstance(data, Data) will be better, but this helps discover errors.
             data.views.append(self)
-        View.t.views.append(self)
+        View.views.append(self)
         self.click_ = lambda value: self.highlighter.update(value)
         self.brush_ = lambda value: self.highlighter.update(value)
 
