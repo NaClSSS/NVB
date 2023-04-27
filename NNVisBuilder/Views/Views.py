@@ -1,7 +1,6 @@
 import pandas as pd
 import json
 import inspect
-from .Elements import *
 import numpy as np
 from backend import Container
 import matplotlib.pyplot as plt
@@ -10,6 +9,7 @@ import torch
 # from NNVisBuilder.utils import MSelector
 from NNVisBuilder.GlobalVariables import *
 from NNVisBuilder.Data import Data
+from NNVisBuilder.Views import View
 
 
 # add record click position base on params after
