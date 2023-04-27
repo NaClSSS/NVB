@@ -107,7 +107,7 @@ The Chinese below corresponds to the English above
 以上英文都是从中文翻译过去的
 
 # 开始使用NVB
-要使用NVB，请首先运行`mlp.py`并查看其工作原理。如果运行`cnn.py`，则相关数据集将自动下载。如果运行`lstmvis.py`，则需要手动从https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s 的数据文件夹中下载eng-fra.txt并将其放置在数据文件夹中，并从模型文件夹下载encoder.pth和decoder.pth并将它们放置在模型文件夹中。
+要使用NVB，请首先运行`mlp.py`并查看其工作原理。如果运行`cnn.py`，则相关数据集将自动下载。如果运行`lstmvis.py`，则需要手动从https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s 的data文件夹中下载eng-fra.txt并将其放置在data文件夹中，并从model文件夹下载encoder.pth和decoder.pth并将它们放置在model文件夹中。
 
 # How to code with NVB to build your own interface
 NVB就像可视分析框架，但是它的可视化是以视图为基本单位。你想要往界面上添加什么视图，就创建一个那种视图的对象就好。
