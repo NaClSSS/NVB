@@ -1,6 +1,3 @@
-# Some model and data here
-https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s 
-
 # How to Use NVB
 
 To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the relevant dataset will be automatically downloaded first. If you run `lstmvis.py`, you need to manually download eng-fra.txt from the data folder at https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s and place it in the data folder, and download encoder.pth and decoder.pth from the model folder and place them in the model folder.
@@ -91,6 +88,12 @@ As a toolkit specialized for neural networks, NNVisBuilder is designed to:
 
 1. Abstract the interface representation model, which summarizes the data processing and interaction processes of the interface as a flow chart
 2. Encapsulate the process of obtaining commonly used data for neural network visualization, such as network activation, gradients, and connections
+
+# Some additional explanations:
+
+1. Composite view: By overlapping some existing views, part of a composite view can be generated.
+2. Multiple models: If data from multiple models is needed, simply create multiple builders. Finally, calling the run method of one of the builders can generate the interface.
+3. Other transformations: Other transformations like TSNE can also be added to the relationship tree (participating in dynamic response after modifying the data). by using `data.apply_transform(OtherTransform(tsne))`. If the TSNE transformation does not need to record relationships, it can be used directly with `tsne(data)`.
 
 Further explanations, detailed instructions, user manuals, and API documents will be provided in the future.
 
@@ -186,5 +189,10 @@ NVB在三个模块上分别有一些设计，这些基于我们的数据抽象�
 NVB作为专门为神经网络设计的工具包，这个专门体现在：
 1. 我们抽象出了一个表示界面的模型，这个模型将界面上的数据处理和交互过程总结为一个流程图
 2. 我们为神经网络可视化时常用的数据封装了获取过程，例如网络激活，梯度，连接等
+
+# 一些补充说明
+1. 复合视图：通过重叠一些已有视图，可以产生一部分复合型视图。
+2. 多模型：如果需要获取多个模型的数据，那么只需要创建多个Builder即可。最后调用其中一个Builder的run就可以生成界面。
+3. 其他变换：像TSNE这样的变换也可以添加到关系树（它会参与修改数据后发生的动态响应）中，使用data.apply_transform(OtherTransform(tsne)即可。如果tsne变换不需要记录关系，直接使用tsne(data)即可。
 
 具体的介绍和详细说明和用户手册和api文档将在后续慢慢补充。。。
