@@ -37,6 +37,8 @@ class Data:
             else:
                 self.type = Type(len(value.shape))
             if isinstance(value, (list, torch.Tensor)):
+                if isinstance(value, torch.Tensor):
+                    value = value.cpu()
                 self.value = np.array(value, copy=isinstance(value, list))
             else:
                 self.value = value
