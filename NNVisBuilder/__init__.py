@@ -17,6 +17,9 @@ import webbrowser
 
 
 class Builder:
+    views = []
+    widgets = []
+
     def __init__(self, model, input_=None, **info):
         self.model = model
         if model:
@@ -51,9 +54,6 @@ class Builder:
             self.sens = {}
         # how to generate gid is based on input range and type
         self.grid = None
-        self.views = []
-        self.widgets = []
-        View.t = self
 
     def get_hook(self, name, cat_dim=0, stage=0, f=None):
         embeddings = self.embeddings if stage == 0 else self.embeddings_1
@@ -362,11 +362,9 @@ class Builder:
         # ----------------------------------------
         f = open(file_name, 'w', encoding='utf-8')
         View.set_file(f)
-        # views and self.named_views each saves the all views, 但是早版本的python字典可能是无序的
-        # 考虑到顺序可能会产生影响，这里同时使用列表和字典
-        views = self.views
+        views = View.views
         vi = 0
-        widgets = self.widgets
+        widgets = View.widgets
         # View.set_set_mode(1)
         for vc in self.view_components:
             data = pd.DataFrame()
@@ -566,11 +564,8 @@ class Builder:
                 self.named_views[name] = view
                 views.append(view)
         View.init_prev_r()
-        # # 手动添加的mapping，待删除
-        # View.idm.add_mapping(0, 1, self.targets[..., np.newaxis].tolist())
-        # View.idm.add_mapping(1, 0, [np.where(self.targets == i)[0].tolist() for i in range(10)])
-        xm = max([v.position[0] + v.size[0] for v in self.views]) + 600
-        ym = max([v.position[1] + v.size[1] for v in self.views]) + 200
+        xm = max([v.position[0] + v.size[0] for v in View.views]) + 600
+        ym = max([v.position[1] + v.size[1] for v in View.views]) + 200
         head(f, views=views, size=[xm, ym])
         for v in views:
             v.core()
@@ -582,29 +577,6 @@ class Builder:
         empty_r={View.idm.empty_r()};
         filter2.selectedIndex = 0;
         filter2_.dispatch('change');""")
-        #         f.write(f"""
-        # for(i=0;i<10;i++){{
-        #     d4.selectAll('input[type=range]').attr('value', i);
-        #     d4.selectAll('input[type=range]').dispatch('change');
-        # }}
-        #         """)
-        #         f.write(f"""
-        #         const link_ = d3.linkVertical();
-        # const data_ = [[[73.52941176470588, 900], [173.52941176470588, 1050]], [[112.74509803921569, 900], [212.7450980392157, 1050]], [[151.9607843137255, 900], [251.9607843137255, 1050]], [[191.1764705882353, 900], [291.1764705882353, 1050]], [[230.3921568627451, 900], [330.3921568627451, 1050]]
-        # , [[269.6078431372549, 900], [369.6078431372549, 1050]], [[308.8235294117647, 900], [408.8235294117647, 1050]], [[348.03921568627453, 900], [448.03921568627453, 1050]], [[387.2549019607843, 900], [487.2549019607843, 1050]], [[426.47058823529414, 900], [526.4705882352941, 1050
-        # ]]];
-        # const g_ = svg.append('g');
-        # g_.selectAll('path')
-        #     .data(data_)
-        #     .enter()
-        #     .append('path')
-        #     .attr('d', d => link_({{'source':[d[0][0], d[0][1]],
-        #         'target':[d[1][0], d[1][1]]}}))
-        #     .attr('stroke', 'red')
-        #     .attr('stroke-width', '2px')
-        #     .attr('fill', 'none');
-        #                 """)
         f.write("\n</script>")
         f.close()
         launch(auto_open)
-
