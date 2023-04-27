@@ -19,7 +19,7 @@ class Widget:
         Widget.idx += 1
         self.click_ = None
         Container.handler['c%d' % self.idx] = self.click
-        View.t.widgets.append(self)
+        View.widgets.append(self)
 
     def core(self):
         View.f.write(f"""
