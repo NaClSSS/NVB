@@ -4,6 +4,8 @@ To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the re
 
 (When selecting a dataset in the `mlp.py` interface, you need to click on the circle on the left side to trigger, and it will be optimized in the future.)
 
+(The version requirements in requirements.txt can actually be lower, for example, the PyTorch version can be 1.2.0, but the specific version requirements still need to be tested.)
+
 # What is NVB
 
 NNVisBuilder is a programming toolkit designed to enable users to easily and quickly build interactive visual analytic interfaces for various neural networks. While we provide some interface templates, they are not a core part of NNVisBuilder. NNVisBuilder is a visualization system that helps users build their own interfaces.
@@ -76,6 +78,7 @@ NVB has some designs in three modules, and these designs based on our data abstr
    - The specific attributes of the views can be specified as an NVB data, which can achieve dynamic binding. If dynamic binding is not needed, the value of the attribute can be directly specified, and there is no need to wrap the value as an NVB data.
    - Users only need to specify the attributes of the views, and the system will automatically generate the visualization. Users do not need to care about the visualization aspect or write visualization code.
    - If users need to customize the view, they can define their own view based on NVB specifications (currently referring to existing view classes), and then use it like using an existing view.
+   - We will provide richer preset view types in the future.
    - NVB also provides some widgets to help users build control panels, which are generally similar to views, but do not require binding data.
 3. Interaction:
    - Based on dynamic binding, users can achieve all types of interaction by modifying the data, transformations or selection information corresponding to other views in the event handling of the interaction. This is **the most fundamental difference in using NVB for coding**, based on our data abstraction.
@@ -93,7 +96,7 @@ As a toolkit specialized for neural networks, NNVisBuilder is designed to:
 
 ## Some additional explanations:
 
-1. Composite view: By overlapping some existing views, part of a composite view can be generated.
+1. Composite view: By overlapping some existing views or aligning some views closely to each other (NVB provides such alignment functionality), composite views can be created.
 2. Multiple models: If data from multiple models is needed, simply create multiple builders. Finally, calling the run method of one of the builders can generate the interface.
 3. Other transformations: Other transformations like TSNE can also be added to the relationship tree (participating in dynamic response after modifying the data) by using `data.apply_transform(OtherTransform(tsne))`. If the TSNE transformation does not need to record relationships, it can be used directly with `tsne(data)`.
 
@@ -112,6 +115,8 @@ The Chinese below corresponds to the English above
 要使用NVB，请首先运行`mlp.py`并查看其工作原理。如果运行`cnn.py`，则相关数据集将自动下载。如果运行`lstmvis.py`，则需要手动从https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s 的data文件夹中下载eng-fra.txt并将其放置在data文件夹中，并从model文件夹下载encoder.pth和decoder.pth并将它们放置在model文件夹中。
 
 （在`mlp.py`的界面左边点击选择数据集时，需要点击到散点上才能触发事件，后续将会优化）
+
+(requirements.txt里的版本要求实际可以再低一些，例如pytorch版本可以是1.2.0，但是具体的版本要求还有待测试)
 
 # How to code with NVB to build your own interface
 NVB就像可视分析框架，但是它的可视化是以视图为基本单位。你想要往界面上添加什么视图，就创建一个那种视图的对象就好。
@@ -184,6 +189,7 @@ NVB在三个模块上分别有一些设计，这些基于我们的数据抽象�
    - 视图的特有属性可以指定为一个NVB数据，这样可以实现动态绑定；如果不需要动态绑定关系，也可以直接指定属性的值，不需要将值包装为NVB数据。
    - 用户只需要指定视图的属性，系统会自动生成可视化，用户无需关心可视化方面的内容，无需编写可视化的代码。
    - 如果用户需要自定义视图，可以基于NVB的规范（暂时参照已有视图类获取）来定义自己的视图，然后像使用原有视图一样使用它。
+   - 我们后续也会提供更加丰富的预设视图类型。
    - NVB同样提供一些小控件帮助用户构建控制面板，这些小控件的使用总体上和视图相似，但是不需要绑定数据。
 3. 交互：
    - 基于动态绑定，用户可以通过在交互处理事件中修改其他视图对应的数据、变换或选中信息来实现所有的交互方式。这是基于我们的数据抽象得出的**使用NVB编码时最核心的不同**。
@@ -199,8 +205,8 @@ NVB作为专门为神经网络设计的工具包，这个专门体现在：
 2. 我们为神经网络可视化时常用的数据封装了获取过程，例如网络激活，梯度，连接等
 
 ## 一些补充说明
-1. 复合视图：通过重叠一些已有视图，可以产生一部分复合型视图。
+1. 复合视图：通过重叠一些已有视图或者使一些视图紧贴彼此（NVB提供了这样的位置对齐功能），可以产生一部分复合型视图。
 2. 多模型：如果需要获取多个模型的数据，那么只需要创建多个Builder即可。最后调用其中一个Builder的run就可以生成界面。
-3. 其他变换：像TSNE这样的变换也可以添加到关系树（它会参与修改数据后发生的动态响应）中，使用data.apply_transform(OtherTransform(tsne)即可。如果tsne变换不需要记录关系，直接使用tsne(data)即可。
+3. 其他变换：像TSNE这样的变换也可以添加到关系树（它会参与修改数据后发生的动态响应）中，使用 `data.apply_transform(OtherTransform(tsne))`即可。如果tsne变换不需要记录关系，直接使用`tsne(data)`即可。
 
 具体的介绍和详细说明和用户手册和api文档将在后续慢慢补充。。。
