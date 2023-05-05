@@ -10,13 +10,12 @@ def is_decimal(s):
 
 
 class Widget:
-    idx = 0
     def __init__(self, position, size=(30, 30)):
         # **info param can be used.
         self.position = position
         self.size = size
-        self.idx = Widget.idx
-        Widget.idx += 1
+        self.idx = View.idx
+        View.idx += 1
         self.click_ = None
         Container.handler['c%d' % self.idx] = self.click
         View.widgets.append(self)
