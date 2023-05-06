@@ -4,6 +4,8 @@ To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the re
 
 (When selecting a dataset in the `mlp.py` interface, you need to click on the circle on the left side to trigger, and it will be optimized in the future.)
 
+(In the interface of `cnn.py`, to brush the scatter plot, you need to first click the "click" button in the upper left corner and change the state to "brush" mode.)
+
 (The version requirements in requirements.txt can actually be lower, for example, the PyTorch version can be 1.2.0, but the specific version requirements still need to be tested.)
 
 # What is NVB
@@ -114,7 +116,9 @@ The Chinese below corresponds to the English above
 # 开始使用NVB
 要使用NVB，请首先运行`mlp.py`并查看其工作原理。如果运行`cnn.py`，则相关数据集将自动下载。如果运行`lstmvis.py`，则需要手动从https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s 的data文件夹中下载eng-fra.txt并将其放置在data文件夹中，并从model文件夹下载encoder.pth和decoder.pth并将它们放置在model文件夹中。
 
-（在`mlp.py`的界面左边点击选择数据集时，需要点击到散点上才能触发事件，后续将会优化）
+(在`mlp.py`的界面左边点击选择数据集时，需要点击到散点上才能触发事件，后续将会优化)
+
+(在`cnn.py`的界面，如果要框选散点，需要先点击左上角的click按钮，更改为brush状态)
 
 (requirements.txt里的版本要求实际可以再低一些，例如pytorch版本可以是1.2.0，但是具体的版本要求还有待测试)
 
