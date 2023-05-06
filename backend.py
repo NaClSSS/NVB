@@ -33,12 +33,14 @@ def highlighter(idx):
     return r
 
 
-# @app.route('/widget/<int:wid>')
-# def widget_event(wid):
-#     r = Container.click_handler['w%d' % wid](request.args)
-#     return r
+# click event for widgets
+@app.route('/widget/<int:wid>')
+def widget_click(wid):
+    r = Container.handler['w%d' % wid](request.args)
+    return r
 
 
+# click event for views
 @app.route('/click/<int:idx>')
 def click(idx):
     r = Container.handler['c%d' % idx](request.args)
