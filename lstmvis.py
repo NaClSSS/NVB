@@ -437,6 +437,10 @@ embedding = Data(value=builder.embeddings['gru'].T)
 plc_data = embedding.filter(name='dims', value=[i for i in range(64, 128)]).filter(dim=1, value=[i + 512 for i in range(25)], name='words').data()
 titles = words.apply_transform(embedding.named_filters['words'], dim=0)
 plc = ParallelCoordinate(plc_data, highlighter=HighLighter(), x_titles=titles, threshold=0)
+threshold_input = Input(plc.align('right(60), under(-50)'), [20, 10], text='0', title='threshold')
+def f(value):
+    plc.threshold.update(value)
+threshold_input.onclick(f)
 
 selected_dims = Data(data_type=Type.Vector)
 selected_dims_view = HeatMap(None, position=plc.align('under(30, next)'), cell_size=[20, 10], labels=selected_dims, highlighter=HighLighter())
