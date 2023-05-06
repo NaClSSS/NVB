@@ -10,14 +10,19 @@ def is_decimal(s):
 
 
 class Widget:
+    idx = 0
+
     def __init__(self, position, size=(30, 30)):
         # **info param can be used.
-        self.position = position
+        if position is not None and len(position) == 4:
+            self.position = position[:2]
+        else:
+            self.position = position
         self.size = size
-        self.idx = View.idx
-        View.idx += 1
+        self.idx = Widget.idx
+        Widget.idx += 1
         self.click_ = None
-        Container.handler['c%d' % self.idx] = self.click
+        Container.handler['w%d' % self.idx] = self.click
         View.widgets.append(self)
 
     def core(self):
@@ -62,7 +67,7 @@ w{self.idx}.append('input')
     .style('height', '100%')
     .on('input', e => {{
         const value = document.getElementById('w{self.idx}').value;
-        d3.json(`/click/{self.idx}?value=${{value}}`).then(r => {{
+        d3.json(`/widget/{self.idx}?value=${{value}}`).then(r => {{
             for(let i of r) triggers[i].dispatch('click');
         }});
     }});
@@ -87,9 +92,10 @@ w{self.idx}.append('button')
 
 
 class Input(Widget):
-    def __init__(self, position, size, text=''):
+    def __init__(self, position, size, text='', title=''):
         super(Input, self).__init__(position, size)
         self.text = text
+        self.title = title
 
     def core(self):
         super(Input, self).core()
@@ -102,16 +108,16 @@ w{self.idx}.append('input')
     .style('height', '100%')
     .on('change', e => {{
         const value = document.getElementById('w{self.idx}').value;
-        d3.json(`/click/{self.idx}?value=${{value}}`).then(r => {{
+        d3.json(`/widget/{self.idx}?value=${{value}}`).then(r => {{
             for(let i of r) triggers[i].dispatch('click');
         }});
     }});
 w{self.idx}.append('p')
-    .text('lr:')
+    .text('{self.title}')
     .style('position', 'absolute')
     .style('width', '20px')
     .style('height', '20px')
-    .style('left', '-20px')
+    .style('left', '-80px')
     .style('top', '-15px');
 d2.selectAll('input#w{self.idx}').attr('value', '{self.text}').dispatch('change');
         """)
@@ -129,6 +135,7 @@ class Select(Widget):
     def __init__(self, position, size=(30, 30), options=None):
         super(Select, self).__init__(position, size)
         self.options = options
+        self.value = 0
 
     def core(self):
         super(Select, self).core()
@@ -143,7 +150,8 @@ select{self.idx}.selectAll('option')
 select{self.idx}
     .on('change', e => {{
         const value = document.getElementById('w{self.idx}').selectedIndex;
-        d3.json(`/click/{self.idx}?value=${{value}}`).then(r => {{
+        d3.json(`/widget/{self.idx}?value=${{value}}`).then(r => {{
+            console.log(r);
             for(let i of r) triggers[i].dispatch('click');
         }});;
     }});
@@ -151,6 +159,7 @@ select{self.idx}
 
     def click(self, request_args):
         value = int(request_args.get('value'))
+        self.value = value
         View.update_list.clear()
         self.click_(value)
         return json.dumps(View.update_list)
@@ -169,7 +178,7 @@ class Button(Widget):
         .style('width', '100%')
         .style('height', '100%')
         .on('click', e => {{
-            d3.json(`/click/{self.idx}?value={self.text}`).then(r => {{
+            d3.json(`/widget/{self.idx}?value={self.text}`).then(r => {{
                 for(let i of r) triggers[i].dispatch('click');
             }});
         }});

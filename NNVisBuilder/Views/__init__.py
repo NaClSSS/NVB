@@ -184,10 +184,7 @@ g{self.idx}.append('rect')
     .attr('x', 0).attr('y', 0)
     .attr('width', rw{self.idx}).attr('height', rh{self.idx})
     .attr("fill", 'none')
-    .attr('stroke', '{self.border_color}')
-    .on('click', e => {{
-        //r = [];
-    }});
+    .attr('stroke', '{self.border_color}');
         """ if self.wrap else '') + (self.ms.core() if self.ms is not None else '') +
                      (f"""
 g{self.idx}.append('text')
@@ -201,12 +198,12 @@ g{self.idx}.append('text')
                      """ if self.title is not None else '')
                      )
 
-    def axis(self, ele_id):
+    def axis(self):
         return f"""
-const ax{ele_id} = d3.axisBottom(sx{ele_id}), ay{ele_id} = d3.axisLeft(sy{ele_id});
-g{self.idx}.append('g').call(ax{ele_id}).attr('transform', `translate(0, ${{extent{self.idx}[1][1]}})`).attr('fill', 'none');
-g{self.idx}.append('g').call(ay{ele_id}).attr('transform', `translate(${{extent{self.idx}[0][0]}}, 0)`).attr('fill', 'none');
-        """
+const ax{self.idx} = d3.axisBottom(sx{self.idx}), ay{self.idx} = d3.axisLeft(sy{self.idx});
+g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none');
+g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
+        """.strip() + "\n"
 
     def generate_vis_data(self):
         # two type of return: json of Dataframe or json of dict 'r' including Dataframe and others
@@ -232,7 +229,7 @@ g{self.idx}.append('g').call(ay{ele_id}).attr('transform', `translate(${{extent{
         size = self.size.copy()
         info = info.split('),')
         for s in info:
-            a = re.findall('\d+\.?\d+', s)
+            a = re.findall('-?\d+\.?\d+', s)
             if 'right' in s:
                 if len(a) != 0:
                     position[0] += int(float(a[0]))
@@ -260,6 +257,8 @@ g{self.idx}.append('g').call(ay{ele_id}).attr('transform', `translate(${{extent{
     #
     def bind_brush(self):
         return f"""
+g{self.idx}.selectAll('rect[class*=overlay]').remove();
+g{self.idx}.selectAll('rect[class*=handle]').remove();
 g{self.idx}.call(brush{self.idx}.extent(extent{self.idx}));
         """.strip()
 

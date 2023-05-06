@@ -11,7 +11,6 @@ from sklearn.manifold import TSNE
 from NNVisBuilder.utils import *
 from backend import launch
 import pandas as pd
-from NNVisBuilder.IDManager import ID, IDManager
 from NNVisBuilder.GlobalVariables import *
 import webbrowser
 
@@ -564,8 +563,8 @@ class Builder:
                 self.named_views[name] = view
                 views.append(view)
         View.init_prev_r()
-        xm = max([v.position[0] + v.size[0] for v in View.views]) + 600
-        ym = max([v.position[1] + v.size[1] for v in View.views]) + 200
+        xm = max([v.position[0] + v.size[0] for v in View.views]) + 1600
+        ym = max([v.position[1] + v.size[1] for v in View.views]) + 1600
         head(f, views=views, size=[xm, ym])
         for v in views:
             v.core()

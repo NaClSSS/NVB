@@ -8,7 +8,7 @@ from matplotlib import colors
 import torch
 # from NNVisBuilder.utils import MSelector
 from NNVisBuilder.GlobalVariables import *
-from NNVisBuilder.Data import Data
+from NNVisBuilder.Data import Data, Filter
 from NNVisBuilder.Views import View
 
 
@@ -138,6 +138,8 @@ highlighter{self.idx}.on('click', e => {{
         if self.click_view:
             View.f.write(f"""
 g{self.idx}.select('rect.border_')
+    .attr('fill', 'white')
+    .attr('opacity', 0.4)
     .on('click', e => {{
         d3.selectAll('rect.border_').attr('stroke-width', 1);
         g{self.idx}.select('rect.border_').attr('stroke-width', '3');
@@ -171,6 +173,15 @@ g{self.idx}.select('rect.border_')
         View.highlight_list.clear()
         self.brush_(value)
         return json.dumps([View.update_list, View.highlight_list])
+
+
+class LineChart(View):
+    def __init__(self, data, position=[100, 100], size=None, highlighter=None, title=None, colors=None):
+        super(LineChart, self).__init__(data, position, size, highlighter, title=title)
+        self.colors = colors
+
+    def generate_vis_data(self):
+        pass
 
 
 class Tooltip(View):
@@ -556,12 +567,12 @@ trigger{self.idx}.on('click', e => {{
 
 class ParallelCoordinate(View):
     def __init__(self, data, position=[100, 100], size=[1250, 300], highlighter=None, title=None, x_titles=None,
-                 threshold=0, selector='on_threshold'):
+                 threshold=None, selector='on_threshold', colors=None):
         """
         :param data: matrix type
         :param threshold: default set to None to enable no threshold, for demonstration we set it to 0.
         """
-        super(ParallelCoordinate, self).__init__(data, position, size, highlighter, title=title, border_color='white')
+        super(ParallelCoordinate, self).__init__(data, position, size, highlighter, title=title, border=False)
         selectors = {'default': f"""
         for(let i=0;i<temp.length;i++){{
             if(sx{self.idx}(temp[i][0])>=x0 && sx{self.idx}(temp[i][0])<=x1){{
@@ -595,13 +606,18 @@ class ParallelCoordinate(View):
         if highlighter is not None and highlighter.core() is None:
             highlighter.set_style(path_config['style'])
         self.click_ = lambda value: self.highlighter.update(value)
-        # if '-' in str in titles, the axis display will go wrong but no influence.
-        self.titles = x_titles
-        self.threshold = threshold
+        self.colors = colors
         if x_titles is not None:
+            if not isinstance(x_titles, Data):
+                x_titles = Data(x_titles)
             x_titles.views.append(self)
-        # if self.threshold is not None:
-        #     threshold.views.append(self)
+        self.titles = x_titles
+        # if '-' in str in titles, the axis display will go wrong but no influence.
+        if threshold is not None:
+            if not isinstance(threshold, Data):
+                threshold = Data(threshold)
+            threshold.views.append(self)
+        self.threshold = threshold
 
     def generate_vis_data(self):
         r = {}
@@ -611,17 +627,16 @@ class ParallelCoordinate(View):
         else:
             titles_ = ['%d-%s' % (i, title) for i, title in enumerate(self.titles.value_())]
         data['path'] = [[[titles_[i], float(x[i])] for i in range(len(x))] for x in self.data.value_()]
-        data['color'] = path_config['color']
+        data['color'] = path_config['color'] if self.colors is None else self.colors
         data['idx'] = list(range(data.shape[0]))
         r['path'] = data.to_dict(orient='records')
         r['titles'] = titles_
         y_min = np.min(self.data.value_())
         y_max = np.max(self.data.value_())
         r['y'] = [y_min - 0.05 * (y_max - y_min), y_max + 0.05 * (y_max - y_min)]
-        Container.handler['threshold%d' % self.idx] = self.change_threshold
         if self.threshold is not None:
-            t = {'path': [[titles_[0], self.threshold], [titles_[-1], self.threshold]],
-                 'color': '#E25440', 'value': self.threshold}
+            t = {'path': [[titles_[0], self.threshold.value_()], [titles_[-1], self.threshold.value_()]],
+                 'color': '#E25440', 'value': self.threshold.value_()}
             r['threshold'] = [t]
         else:
             r['threshold'] = []
@@ -634,7 +649,6 @@ class ParallelCoordinate(View):
 const sx{self.idx} = d3.scaleBand().paddingInner(1).range([0, rw{self.idx}]);
 const sy{self.idx} = d3.scaleLinear().range([rh{self.idx}, 0]);
 let threshold{self.idx} = 0;
-extent{self.idx} = [[5, 0], [rw{self.idx}, rh{self.idx}]];
 brush{self.idx}.on("end", e => {{
         if(e.selection){{
             const [[x0, y0], [x1, y1]] = e.selection;
@@ -667,19 +681,11 @@ brush{self.idx}.on("end", e => {{
                 }});
         }}
     }});
-g{self.idx}.select('rect.border')
-    .on('click', e => {{
-        const value = sy{self.idx}.invert(d3.pointer(e)[1]);
-        d3.json(`/threshold/{self.idx}?value=${{value}}`).then(r => {{
-            for(let i of r[0]) triggers[i].dispatch('click');
-            for(let i of r[1]) highlighters[i].dispatch('click');
-        }});
-    }});
 trigger{self.idx}.on('click', () => {{
     d3.json('/trigger/{self.idx}').then(r => {{
         sx{self.idx}.domain(r['titles']);
         sy{self.idx}.domain(r['y']);
-        {self.axis(self.idx)}
+        {self.axis()}
         g{self.idx}.selectAll('path.a').remove();
         const line{self.idx} = d3.line();
         g{self.idx}.selectAll('path.a')
@@ -705,8 +711,7 @@ trigger{self.idx}.on('click', () => {{
 trigger{self.idx}.dispatch('click');
 highlighter{self.idx}.on('click', e => {{
     d3.json('/highlighter/{self.idx}').then(r => {{
-    """ + '\n'.join(
-            ["g%d.selectAll('path.a')" % self.idx + highlighter.core() for highlighter in [self.highlighter]]) + f"""
+        g{self.idx}.selectAll('path.a'){self.highlighter.core() if self.highlighter is not None else ';'}
     }});
 }});
             """)
@@ -735,61 +740,118 @@ highlighter{self.idx}.on('click', e => {{
             print("Wrong brush handler.")
         return json.dumps([View.update_list, View.highlight_list])
 
-    def change_threshold(self, request_args):
-        value = request_args.get('value')
-        if self.threshold is not None:
-            self.threshold = float(value)
-        View.update_list = [self.idx]
-        View.highlight_list.clear()
-        return json.dumps([View.update_list, View.highlight_list])
-
-    def axis(self, ele_id):
+    def axis(self):
         return f"""
-const ax{ele_id} = d3.axisBottom(sx{ele_id}).tickFormat(d => d.slice(d.indexOf('-')+1)), ay{ele_id} = d3.axisLeft(sy{ele_id});
-g{self.idx}.append('g').call(ax{ele_id}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none');
-g{self.idx}.append('g').call(ay{ele_id}).attr('fill', 'none');
+const ax{self.idx} = d3.axisBottom(sx{self.idx});
+const ay{self.idx} = d3.axisLeft(sy{self.idx});
+if(typeof(r['titles'][0]) == 'number'){{
+    const tv{self.idx} = r['titles'].filter((d, i) => i % Math.ceil(r['titles'].length/10) == 0);
+    if((r['titles'].length-1) % Math.ceil(r['titles'].length/20) != 0) tv{self.idx}.push(r['titles'][r['titles'].length-1]);
+    ax{self.idx}.tickValues(tv{self.idx});
+}}
+else{{
+    ax{self.idx}.tickFormat(d => d.slice(d.indexOf('-')+1));
+}}
+
+g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none');
+g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
         """.strip() + "\n"
 
 
 class BarChart(View):
-    def __init__(self, position, size, data, reg_no=-1, **info):
+    def __init__(self, data, position, size, highlighter=None, titles=None, show_titles=None, max_value=None, padding=0.2, title=None):
         """
         info: max_height, reg_no
         """
-        super(BarChart, self).__init__(position, size, data, reg_no, border=False, info=info)
-        # max_height = info.get('max_height', 0)
-        # if max_height == 0:
-        #     y1 = 1.1 * self.data['value'].max()
-        # else:
-        #     y1 = max_height
-        n = data.shape[0]
-        self.y1 = 1.1 * data['y'].max()
-        self.padding = 0.2
-        data['width'] = (1 - self.padding) * self.size[0] / n
-        data['height'] = data['y'] / self.y1 * self.size[1]
-        # 下面两行是因为d3会因为不明原因把数据的第一项吞掉，所以需要加一个多余的第一项
-        data.loc[-1] = data.loc[0]
-        data = data.sort_index()
-        self.elements = Rect(self.idx, data, reg_no=reg_no)
+        if not isinstance(data, Data):
+            data = Data(data)
+        super(BarChart, self).__init__(data, position, size, highlighter, title=title, border=False)
+        if highlighter is not None and highlighter.core() is None:
+            highlighter.set_style(barchart_config['bc_red'])
+        self.max_value = max_value
+        self.max_value1 = 0
+        self.titles = titles
+        self.show_titles = show_titles
+        self.padding = padding
 
-    def core(self, views=None):
-        super(BarChart, self).core(views)
-        ele_id = self.elements.ele_id
+    def generate_vis_data(self):
+        r = {}
+        data = pd.DataFrame()
+        if self.max_value is None:
+            self.max_value1 = self.data.value_().max()
+        else:
+            self.max_value1 = self.max_value
+        data['height'] = 0.95 * self.size[1] / self.max_value1 * self.data.value_()
+        if self.titles is None:
+            r['titles'] = list(range(data.shape[0]))
+            if self.show_titles is None:
+                r['show_titles'] = False
+            else:
+                r['show_titles'] = self.show_titles
+        else:
+            r['titles'] = self.titles
+            if self.show_titles is None:
+                r['show_titles'] = True
+            else:
+                r['show_titles'] = self.show_titles
+        data['x'] = r['titles']
+        data['color'] = 'blue'
+        data['idx'] = list(range(data.shape[0]))
+        r['rect'] = data.to_dict(orient='records')
+        return json.dumps(r)
+
+    def core(self):
+        super(BarChart, self).core()
         View.f.write(f"""
-const sx{ele_id} = d3.scaleBand()
-    .domain({self.data['x'].values.tolist()})
-    .range([rx{self.idx}, rx{self.idx} + rw{self.idx}]).padding({self.padding}).align(0.5);
-const sy{ele_id} = d3.scaleLinear()
-    .domain([0, {self.y1}])
-    .range([ry{self.idx} + rh{self.idx}, ry{self.idx}]);
-{self.elements.core(views)}
-{self.axis(ele_id)}
-{self.brush(views)}
+const sx{self.idx} = d3.scaleBand()
+    .range([0, rw{self.idx}]).padding({self.padding});
+const sy{self.idx} = d3.scaleLinear()
+    .domain([0, {self.max_value1 * 20 / 19}])
+    .range([rh{self.idx}, 0]);
+trigger{self.idx}.on('click', () => {{
+    d3.json('/trigger/{self.idx}').then(r => {{
+        sx{self.idx}.domain(r['titles']);
+        {self.axis()}
+        g{self.idx}.selectAll('rect.a').remove();
+        g{self.idx}.selectAll('rect.a')
+            .data(r['rect']).enter().append('rect')
+            .classed('a', true)
+            .attr('width', d => sx{self.idx}.bandwidth())
+            .attr('height', d => d.height)
+            .attr('x', d => sx{self.idx}(d.x))
+            .attr('y', d => {self.size[1]} - d.height)
+            .attr('stroke', d => d.color)
+            .attr('fill', d => d.color)
+            .on('click', e => {{
+                d3.json(`/click/{self.idx}?value=${{{select_this}.datum().idx}}`).then(r => {{
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                }});
+            }});
+    }});
+}});
+trigger{self.idx}.dispatch('click');
+highlighter{self.idx}.on('click', e => {{
+    d3.json('/highlighter/{self.idx}').then(r => {{
+        g{self.idx}.selectAll('rect.a'){self.highlighter.core() if self.highlighter is not None else ';'}
+    }});
+}});
         """.strip() + "\n")
 
-    def response(self, views=None, back=False):
-        return self.elements.response(back)
+    def click(self, request_args):
+        value = int(request_args.get('value'))
+        View.update_list.clear()
+        View.highlight_list.clear()
+        self.click_(value)
+        return json.dumps([View.update_list, View.highlight_list])
 
+    def axis(self):
+        return f"""
+const ax{self.idx} = d3.axisBottom(sx{self.idx}), ay{self.idx} = d3.axisLeft(sy{self.idx});
+if(r['show_titles'] == false) ax{self.idx}.tickFormat('');
+g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none');
+g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
+        """.strip() + "\n"
 
 # class LinkMap(View):
 #     # 一个特殊的view，需要修正
@@ -859,7 +921,7 @@ const sy{ele_id} = d3.scaleLinear()
 
 class HeatMap(View):
     def __init__(self, data, position, size=None, title=None, cm=None, cell_size=[20, 25], labels=None,
-                 highlighter=None, selector=None):
+                 highlighter=None, selector=None, opacity=1):
         """
         :param data: matrix type
         if labels, don't use thin size rectangle.
@@ -879,6 +941,7 @@ class HeatMap(View):
             highlighter.set_style(heat_map_config['style1'])
         self.selector = selector
         self.labels = labels
+        self.opacity = opacity
         if labels is not None:
             labels.views.append(self)
         self.shape = None
@@ -901,6 +964,8 @@ class HeatMap(View):
                     value[value > 19] = 19
                 data['color'] = list(
                     map(lambda x: colors.to_hex(self.cm(x), keep_alpha=True), value.reshape(-1).tolist()))
+                data['h_color'] = list(
+                    map(lambda x: colors.to_hex(plt.get_cmap('Reds')(x), keep_alpha=True), value.reshape(-1).tolist()))
                 if len(self.data.size()) != 1:
                     self.shape = self.data.size()
                 else:
@@ -919,6 +984,7 @@ class HeatMap(View):
         data['height'] = height
         data['x'] = [width * j for i in range(self.shape[0]) for j in range(self.shape[1])]
         data['y'] = [height * i for i in range(self.shape[0]) for j in range(self.shape[1])]
+        data['opacity'] = self.opacity
         data['idx'] = list(range(data.shape[0]))
         data['idt'] = [[i, j] for i in range(self.shape[0]) for j in range(self.shape[1])]
         return data.to_json(orient='records')
@@ -932,7 +998,7 @@ trigger{self.idx}.on('click', () => {{
         g{self.idx}.selectAll('rect.a')
             .data(r).enter().append('rect')
             .classed('a', 'true')
-            .attr('x', d => d.x).attr('y', d => d.y)
+            .attr('x', d => d.x).attr('y', d => d.y).attr('opacity', d => d.opacity)
             .attr('width', d => d.width).attr('height', d => d.height)
             .attr('fill', d => {{
                 if(typeof(d.color) != 'undefined') return d.color;
@@ -958,7 +1024,7 @@ trigger{self.idx}.on('click', () => {{
                 .attr('font-size', d => d.width * 0.6)
                 .text(d => d.label)
                 .on('click', e => {{
-                d3.json(`/click/{self.idx}?value=${{{select_this}.datum().idx}}`).then(r => {{
+                    d3.json(`/click/{self.idx}?value=${{{select_this}.datum().idx}}`).then(r => {{
                         for(let i of r[0]) triggers[i].dispatch('click');
                         for(let i of r[1]) highlighters[i].dispatch('click');
                     }});

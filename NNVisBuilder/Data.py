@@ -50,7 +50,6 @@ class Data:
             self.builder = builder
             self.info = info
 
-
     def filter(self, dim=0, filter_type=Type.Scalar, name=None, value=None):
         t = Filter(dim, filter_type, value=value, data=self, root_data=self)
         self.rules.append(t)
@@ -82,6 +81,10 @@ class Data:
         self.rules.append(t)
         return t.data()
 
+    def max(self, axis=None):
+        # max currently not in dynamic
+        return np.max(self.value, axis)
+
     def other_transform(self, f):
         t = OtherTransform(f, data=self, root_data=self)
         self.rules.append(t)
@@ -89,7 +92,7 @@ class Data:
 
     def apply_transform(self, t, dim=-1, name=None, flag=True):
         # non-minus1 dim will cover default of t
-        if name is not None and isinstance(t, Filter):
+        if name is not None and isinstance(t, (Filter, OtherTransform)):
             self.named_filters[name] = t
         self.rules.append(t)
         return t.apply_transform(self, dim, flag)
@@ -362,6 +365,14 @@ class OtherTransform(Rule):
         if len(self.source_data) == 1:
             self.generate_result(self.source_data[0], False)
 
+    def update(self, f, flag=True):
+        self.f = f
+        self.apply()
+        if flag:
+            for data in self.result_data:
+                data.update_()
+        return self
+
     def apply_i(self, i, flag=True):
         self.result_data[i].value = self.f(self.source_data[i].value)
         if flag:
@@ -408,6 +419,16 @@ styles = {
     .attr('fill', d => {
         if(d.idt[1] == r){
             return 'white';
+        }
+        else{
+            return d.color;
+        }
+    });
+    """,
+    'bc_red': """
+    .attr('fill', d => {
+        if(d.idx == r){
+            return 'red';
         }
         else{
             return d.color;
@@ -460,3 +481,30 @@ class HighLighter:
 
     def core(self):
         return self.style
+
+
+# need to be generalized
+class MultiHighlighter:
+    def __init__(self, value=None):
+        self.value = [-1, -1]
+        self.views = []
+        self.mappings = []
+
+    def update(self, value, idx):
+        self.value[idx] = value
+        for view in self.views:
+            if view.idx not in View.highlight_list:
+                View.highlight_list.append(view.idx)
+        for f in self.mappings:
+            if self.type == Type.Scalar:
+                f(self.value)
+            else:
+                f(self.value.copy())
+
+    def core(self):
+        return f"""
+.attr('fill', d => {{
+    if(d.idt[0] == r[0] || d.idt[1] == r[1]) return d.h_color;
+    return d.color;
+}});
+        """
