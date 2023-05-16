@@ -1,3 +1,5 @@
+这个branch用来临时保存KD-t的工作，后面整合最新的NVB到main，可能会删除这个分支。
+
 # Getting started with NVB
 
 To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the relevant dataset will be automatically downloaded first. If you run `lstmvis.py`, you need to manually download eng-fra.txt from the data folder at https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s and place it in the data folder, and download encoder.pth and decoder.pth from the model folder and place them in the model folder.
