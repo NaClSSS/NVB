@@ -3,6 +3,7 @@ from enum import Enum
 import torch
 from PIL import Image
 from NNVisBuilder.Views import View
+from NNVisBuilder.GlobalVariables import *
 
 
 class Type(Enum):
@@ -85,6 +86,10 @@ class Data:
         # max currently not in dynamic
         return np.max(self.value, axis)
 
+    def min(self, axis=None):
+        # max currently not in dynamic
+        return np.min(self.value, axis)
+
     def other_transform(self, f):
         t = OtherTransform(f, data=self, root_data=self)
         self.rules.append(t)
@@ -98,7 +103,11 @@ class Data:
         return t.apply_transform(self, dim, flag)
 
     def update(self, value, flag=True):
+        if isinstance(value, Data):
+            value = value.value_()
         if isinstance(value, (list, torch.Tensor)):
+            if isinstance(value, torch.Tensor):
+                value = value.cpu()
             value = np.array(value, copy=isinstance(value, list))
         self.value = value
         if flag:
@@ -119,12 +128,20 @@ class Data:
     def size(self):
         return self.value.shape
 
+    def where(self, x):
+        return np.where(self.value == x)[0].tolist()
+
     def argsort(self, dim=0, reverse=False):
         # handle dim ...
         if reverse:
             return np.argsort(-self.value)
         else:
             return np.argsort(self.value)
+
+    def where_range(self, d, a, b):
+        # temporally used function
+        i_mask = (self.value[:, d] >= a) & (self.value[:, d] <= b)
+        return np.where(i_mask)[0].tolist()
 
     def tolist(self):
         # reshape(-1) should be seperated
@@ -316,6 +333,9 @@ class Filter(Rule):
     def value_(self):
         return self.filter_value
 
+    def __getitem__(self, index):
+        return self.filter_value[index]
+
 
 class Aggregation(Rule):
     def __init__(self, dim=0, op='sum', data=None, root_data=None, flag=True):
@@ -358,6 +378,43 @@ class Reshape(Rule):
         return self.result_data[-1]
 
 
+class Reorder(Rule):
+    def __init__(self, order=None, data=None, root_data=None, flag=True):
+        super(Reorder, self).__init__(0, data, root_data=root_data)
+        self.order = order
+        self.views = []
+        if len(self.source_data) == 1:
+            self.generate_result(self.source_data[0], flag)
+
+    def update(self, value, flag=True):
+        self.order = value
+        self.apply()
+        if flag:
+            for view in self.views:
+                if view.idx not in View.update_list:
+                    View.update_list.append(view.idx)
+            for data in self.result_data:
+                data.update_()
+        return self
+
+    def value_(self):
+        return self.order
+
+    def apply_i(self, i, flag=True):
+        if self.order is None:
+            self.result_data[i].value = self.source_data[i].value
+        else:
+            self.result_data[i].value = self.source_data[i].value[self.order]
+        if flag:
+            self.result_data[i].update_()
+
+    def generate_result(self, data, flag=True):
+        self.result_data.append(Data(data_type=Type(len(np.array(self.order).shape))))
+        if flag:
+            self.apply_i(-1)
+        return self.result_data[-1]
+
+
 class OtherTransform(Rule):
     def __init__(self, f, data=None, root_data=None):
         super(OtherTransform, self).__init__(0, data, root_data=root_data)
@@ -383,59 +440,6 @@ class OtherTransform(Rule):
         if flag:
             self.apply_i(-1)
         return self.result_data[-1]
-
-
-styles = {
-    'circle_size': """
-    .attr('r', d => {
-        if(r.indexOf(d.idx) == -1) return d.r;
-        else return 2 * d.r;
-    });
-    """,
-    'path_color': """
-    .attr('stroke', d => {{
-        const pos = r.indexOf(d.idx);
-        if(pos != -1){{
-            return 'blue';
-        }}
-        else{{
-            return d.color;
-        }}
-    }});
-    """,
-    'heat_map_style': """
-    .attr('fill', d => {
-        if(r.indexOf(d.idt[1]) == -1){
-            const rgb = d3.rgb(d.color);  
-            const gray = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
-            return 'rgba(' + gray + ', ' + gray + ', ' + gray + ', 1)'
-        }
-        else{
-            return d.color;
-        }
-    });
-    """,
-    'hm_white': """
-    .attr('fill', d => {
-        if(d.idt[1] == r){
-            return 'white';
-        }
-        else{
-            return d.color;
-        }
-    });
-    """,
-    'bc_red': """
-    .attr('fill', d => {
-        if(d.idx == r){
-            return 'red';
-        }
-        else{
-            return d.color;
-        }
-    });
-    """
-}
 
 
 class HighLighter:
@@ -484,27 +488,38 @@ class HighLighter:
 
 
 # need to be generalized
-class MultiHighlighter:
-    def __init__(self, value=None):
-        self.value = [-1, -1]
+# (Multi)HighLighter should carry other info in r.
+class MultiHighLighter:
+    def __init__(self, style, value=None, type=Type.Scalar, n=3):
+        self.style = styles[style] if style is not None else None
+        self.type = type
+        if type == Type.Scalar:
+            self.value = [-1, -1]
+        elif type == Type.Vector:
+            self.value = [[], [], [], []]
+        else:
+            self.value = [None, None]
+        self.n = n
+        self.intersect = []
         self.views = []
         self.mappings = []
+        if value is not None:
+            self.update(value)
 
-    def update(self, value, idx):
-        self.value[idx] = value
+    def update(self, value, idx=None):
+        if idx is not None:
+            self.value[idx] = value
+        else:
+            self.value = value
+            # if len(value) == 3:
+            #     self.value = value + []
+            # else:
+            #     self.value = value
         for view in self.views:
             if view.idx not in View.highlight_list:
                 View.highlight_list.append(view.idx)
         for f in self.mappings:
-            if self.type == Type.Scalar:
-                f(self.value)
-            else:
-                f(self.value.copy())
+            f(self.value.copy())
 
     def core(self):
-        return f"""
-.attr('fill', d => {{
-    if(d.idt[0] == r[0] || d.idt[1] == r[1]) return d.h_color;
-    return d.color;
-}});
-        """
+        return self.style

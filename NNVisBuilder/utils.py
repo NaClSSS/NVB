@@ -12,7 +12,17 @@ t_obj = TSNE()
 
 
 def tsne(value):
+    if len(value) < 2:
+        return []
     return t_obj.fit_transform(value)
+    # # value: tensor or ndarray
+    # if len(value.shape) == 2:
+    #     return t_obj.fit_transform(value)
+    # else:
+    #     # don't need to separate
+    #     shape = value.shape
+    #     r = t_obj.fit_transform(value.reshape((-1, shape[-1])))
+    #     return r.reshape((*shape[:-1], r.shape[-1]))
 
 
 class MSelector:
@@ -432,6 +442,7 @@ def head(f, views=None, size=[2000, 1200]):
 </head>
 <style>
     /*name abc... is preserved.*/
+    
     #div1 {
         width: 200px;
         position: absolute;
@@ -608,6 +619,7 @@ def head(f, views=None, size=[2000, 1200]):
     const d1 = d3.select('#div1'), d2 = d3.select('#div2'), svg = d2.select('svg');
     const toolTip = d3.select('#toolTip'), toolTip1 = d3.select('#toolTip1'), toolTip2 = d3.select('#toolTip2');
     const be = document.getElementById('button_e');
+    let x_click, y_click;
     be.addEventListener('click', () => {
         if (d1.style('left') == '0px') {
             d1.transition().style('left', '-170px');
@@ -623,6 +635,9 @@ def head(f, views=None, size=[2000, 1200]):
     const filter = document.getElementById('select1');
     const filter2 = document.getElementById('select2'), filter2_ = d3.select(filter2);
     const ifSV = document.getElementById('button3');
+    /*for (let bu of [be, ifTip, mode, filter, filter2, ifSV]){
+        bu.style.display = 'none';
+    }*/
 
     let comp_t = false;
     ifSV.addEventListener('click', () => {
