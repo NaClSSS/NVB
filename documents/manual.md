@@ -3,7 +3,39 @@
 
 NNVisBuilder is a toolkit used to quickly prototype interactive visual analysis interfaces for neural networks. The interface built with NNVisBuilder is organized in views. Views are bound to data, and when the bound data changes, the views change accordingly. Developers can define interactions on views and modify the values of data within the interactions to achieve different interaction effects. NNVisBuilder mainly includes the implementation of three modules: Builder module, Data module, and View module. The Builder module is used to obtain data related to neural networks. The Data module defines tensor Data class and various transformations on data. The View module contains the definitions of different views.
 
-[TOC]
+- [Builder Module](#builder-module)
+- [Data Module](#data-module)
+    - [Type](#type)
+  - [Data](#data)
+  - [Data Transformation](#data-transformation)
+    - [Rule (Base Class)](#rule-base-class)
+    - [Filter](#filter)
+    - [Aggregation](#aggregation)
+    - [Transpose](#transpose)
+    - [Reshape](#reshape)
+    - [OtherTransform](#othertransform)
+- [View Module](#view-module)
+  - [View (Base Class)](#view-base-class)
+  - [Implementation \& Customized View](#implementation--customized-view)
+    - [Implementation](#implementation)
+    - [Backend Function](#backend-function)
+    - [Customized View](#customized-view)
+  - [Built-in Views](#built-in-views)
+    - [ScatterPlot](#scatterplot)
+    - [Gallery](#gallery)
+    - [HeatMap](#heatmap)
+    - [SentenceList](#sentencelist)
+    - [TextView](#textview)
+    - [ParallelCoordinate](#parallelcoordinate)
+    - [BarChart](#barchart)
+    - [PointChart](#pointchart)
+    - [LinkMap](#linkmap)
+    - [Other View Classes](#other-view-classes)
+    - [Widget](#widget)
+  - [Classes for Highlighting](#classes-for-highlighting)
+    - [Highlighter](#highlighter)
+    - [MultiHighlighter](#multihighlighter)
+
 # Builder Module
 When building prototypes for visual analysis interfaces for neural networks, various types of data are used, mainly including network activations (also known as embedding, hidden layers or the output of layers) and parameters, input, training metrics, and so on. Inputs, training metrics, and other complex data are usually held by the user. The Builder module can be used to retrieve data related to the network.
 
