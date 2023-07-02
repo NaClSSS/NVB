@@ -1,4 +1,4 @@
-NNVisBuilder is a toolkit used to quickly prototype interactive visual analysis interfaces for neural networks. The interface built with NNVisBuilder is organized in views. Views are bound to data, and when the bound data changes, the views change accordingly. Developers can define interactions on views and modify the values of data within the interactions to achieve different interaction effects. NNVisBuilder mainly includes the implementation of three modules: Builder module, Data module, and View module. The Builder module is used to obtain data related to neural networks. The Data module defines tensor Data class and various transformations on data. The View module contains the definitions of different views.
+NNVisBuilder is a toolkit used to quickly prototype interactive visual analysis interfaces for neural networks. The interface built with NNVisBuilder is organized in views. Views are bound to data, and when the bound data changes, the views change accordingly. Developers can define interactions on views and modify the values of data within the interactions to achieve different interaction effects. NNVisBuilder mainly includes the implementation of three modules: the builder module, the data module, and the view module. The builder module is used to obtain data related to neural networks. The data module defines the tensor data class and various transformation classes on data. The view module contains the definitions of different views.
 
 - [Builder Module](#builder-module)
 - [Data Module](#data-module)
@@ -33,11 +33,10 @@ NNVisBuilder is a toolkit used to quickly prototype interactive visual analysis 
     - [Highlighter](#highlighter)
     - [MultiHighlighter](#multihighlighter)
 
-
 # Builder Module
-When building prototypes for visual analysis interfaces for neural networks, various types of data are used, mainly including network activations (also known as embedding, hidden layers or the output of layers) and parameters, input, training metrics, and so on. Inputs, training metrics, and other complex data are usually held by the user. The Builder module can be used to retrieve data related to the network.
+When building prototypes for visual analysis interfaces for neural networks, various types of data are used, mainly including network activations (also known as embedding, hidden layers, or the output of layers) and parameters, input, training metrics, and so on. Inputs, training metrics, and other complex data are usually held by the user. The builder module can be used to retrieve data related to the network.
 
-The builder module includes a Builder class to wrap the model. Through the Builder object, the activations and parameters of the model can be obtained. Builder accesses the connection data directly through the model, and obtains activation data by adding hooks. Builder is also responsible for building and launching the interface. All defined views will be stored in the class variables of the Builder. Builder will parse these views and generate the corresponding front-end code when launching the interface.
+The builder module includes a `Builder` class to wrap the model. The activations and parameters of the model can be obtained through a `Builder` object. `Builder` accesses the connection data directly through the model and obtains activation data by adding Pytorch hooks. `Builder` is also responsible for building and launching the interface. All defined views will be stored in the class variables of `Builder`. `Builder` will parse these views and generate the corresponding front-end code when launching the interface.
 - key variables
   -  `model`: The model.
   -  `embeddings`: A `Dict`, where the keys are the names of the network layers and the values are the activations(output) corresponding to that layer in stage 0.
@@ -52,7 +51,7 @@ The builder module includes a Builder class to wrap the model. Through the Build
   - `layers`: The names of the network layers whose hidden layers need to be recorded. This parameter can be a `str` or `list`.
   - `cat_dim`: The input dimension arrangement for different network layers may be different, for example, some outputs may have the pattern `(batch_size, hid_dim)`, while others may have `(hid_dim, batch_size)`. We usually want to concatenate them along the `batch_size` dimension when multiple batches of samples are input to the model. This parameter allows the user to specify the dimension for concatenation.
   - `f`: The output of some network layers may not be a PyTorch tensor, for example, a tuple of tensors in some layers of an RNN network. `f` allows the user to specify how to extract the tensor from the output of the network layer. For example, defining `f` as the following lambda function `lambda x: x(1)`, indicates that the second tensor in the output tuple should be extracted.
-  - `stage`: NNVisBuilder divides the recording of hidden layers into two stages, stage 0 and stage 1, which represent before and after the interface is launched (i.e., before and after run is called), respectively. For example, when a user needs to input a sentence on the interface and then pass it into the model to observe the embedding of a certain layer, they can specify the stage as 1. The reason for distinguishing the stages is that recording hidden layers usually consumes a lot of memory, and sometimes the layers that need to be recorded in stage 1 do not need to be recorded in stage 0. By limiting the stage, memory can be saved. If the user specifies the stage as "all", NNVisBuilder will record the hidden layers of both stages.
+  - `stage`: NNVisBuilder divides the recording of hidden layers into two stages, stage 0 and stage 1, which represent before and after the interface is launched (i.e., before and after the `run` is called), respectively. For example, when a user needs to input a sentence on the interface and then pass it into the model to observe the embedding of a certain layer, they can specify the stage as 1. The reason for distinguishing the stages is that recording hidden layers usually consumes a lot of memory, and sometimes the layers that need to be recorded in stage 1 do not need to be recorded in stage 0. By limiting the stage, memory can be saved. If the user specifies the stage as "all", NNVisBuilder will record the hidden layers of both stages.
   - `activate`: If it is `True`, the generated hooks will be registered at the same time. This will automatically record the hidden layers to the corresponding key in `embedding` when input is passed to `model` any time later. If it is `False`, the hooks need to be activated later to record the activations.
 - `def add_connects(self, layers):`
   NNVisBuilder will allocate a position in the `connections` for the specified layer, and each subsequent call to `record_connects` will record the weights of the corresponding layer. The meaning of `layers` is the same as `add_hiddens`.
@@ -70,9 +69,9 @@ The builder module includes a Builder class to wrap the model. Through the Build
   Generate grid data based on the range of the input (used to observe decision boundaries).
 - `def add_hidden_grid(self, layers):`
   Specify the layers for which the embedding needs to be recorded for the grid data.
-- Other funtions no need to be called by developers.
+- Other functions no need to be called by developers.
 # Data Module
-The Data module mainly contains a Data class and many Transformation classes.
+The data module mainly contains a `Data` class and many Transformation classes.
 ### Type
 An enumeration class used to represent the order of a tensor. In addition to `Scalar`, `Vector`, and `Matrix` representing their original meanings, we use `Tensor3`, `Tensor4`, etc. to represent higher-order tensors.
 ## Data
@@ -84,11 +83,11 @@ NNVisBuilder considers the data used in the visualization process as tensors and
   - `rules`: The associated transformations.
   - `name_filters`: A `Dict` that stores the mapping between the filter name (if specified) and the corresponding `Filter`.
 - `def __init__(self, value=None, data_type=None):`
-  Constructor, the developers can directly wrap a data or specify a data type to generate an `Data` object. If the developers specifies `value`, the `type` will be automatically determined.
+  Constructor, the developers can directly wrap data or specify a data type to generate a `Data` object. If the developers specify `value`, the `type` will be automatically determined.
 - `def update(self, value, flag=True):`
-  Modify the `value` and execute the transformations saved in `rules` to modify associated data. The execution of these transformations will cause the update of the data at the end of the transformation, thus completing the update of all associated data in a depth-first search manner. If `flag` is `True`, these transformations will be executed immediately. Otherwise, these transformations will be executed automatically when the associated data is needed. The `views` associated with the data will also be recorded in `View.update_list` for redraw. 
+  Modify the `value` and execute the transformations saved in `rules` to modify associated data. The execution of these transformations will cause the update of the data at the end of the transformation, thus completing the update of all associated data in a depth-first search manner. If `flag` is `True`, these transformations will be executed immediately. Otherwise, these transformations will be executed automatically when the associated data is needed. The `views` associated with the data will also be recorded in `View.update_list` for redrawing. 
 - `def filter(self, dim=0, filter_type=Type.Scalar, name=None, value=None):`
-  Generate a `Filter` object and bind it to the data (save to `rules`). The role of `dim`, `filter_type` and `value` can be found in the Filter section. If `name` is specified, the mapping between `name` and the filter will be stored in `name_filters`, and the filter can be accessed later through `data.name_filters(name)`. Return the generated filter and the same function is supported on `Filter` and other transformations, thus facilitating the definition of a series of transformations in a chained manner (`data.filter(...).filter(...).aggregation(...)`).
+  Generate a `Filter` object and bind it to the data (save to `rules`). The role of `dim`, `filter_type`, and `value` can be found in the Filter section. If `name` is specified, the mapping between `name` and the filter will be stored in `name_filters`, and the filter can be accessed later through `data.name_filters(name)`. Return the generated filter and the same function is supported on `Filter` and other transformations, thus facilitating the definition of a series of transformations in a chained manner (`data.filter(...).filter(...).aggregation(...)`).
 - `def aggregation(self, dim=0, op='sum'):`
   Similar to the above.
 - `def reshape(self, shape=(-1,)):`
@@ -120,13 +119,13 @@ All transformation classes inherit from this class.
   - `source_data`: A list of all the data that the transformation acts on.
   - `dim`: The default dimension that the transformation acts on (if not specified separately.)
   - `dims`: A list of dimensions that the transformation actually acts on with respective to `source_data`.
-  - `result_data`: A list of the resulting data produced by the transformation with respective to `source_data`.
+  - `result_data`: A list of the resulting data produced by the transformation with respect to `source_data`.
 - `def __init__(self, dim=0, data=None):`
-  Constructor, when defining transformations, developers can specify the default dimension or the data to be acted upon. Generally, when the user calls `data1.filter` and so on, the NNVisBuilder system will pass `data1` to the parameter to call this constructor. Otherwise, developers no need to speicify `data`.
+  Constructor, when defining transformations, developers can specify the default dimension or the data to be acted upon. Generally, when the user calls `data1.filter` and so on, the NNVisBuilder system will pass `data1` to the parameter to call this constructor. Otherwise, developers do not need to specify `data`.
 - `def data(self):` 
   Return `result_data[0]`. This function is particular for returning data after defining a series of transformations. Such as `data1 = data.filter(...).aggregation(...).filter(...).data()`.
 - `def filter(self, dim=0, filter_type=Type.Scalar, name=None, value=None):`
-  Similar to function `filter` in `Data`.
+  Similar to the function `filter` in `Data`.
 - `def aggregation(self, dim=0, op='sum'):`
   Similar to the above.
 - `def reshape(self, shape=(-1,)):`
@@ -134,10 +133,10 @@ All transformation classes inherit from this class.
 - `def other_transform(self, f):`
   Similar to the above.
 - `def generate_result(self, data, flag=True):`
-  Create a `Data` object for result, if `flag` is `True`, `apply_i` will be called to compute the value of the generated data. All classes that inherit from `Rule` need to implement this method. For example, `Filter` creates the result data object based on its own type and the type of the source data. If the source data is `Type.Matrix` and the filter itself is `Type.Scalar`, then a `Type.Vector` result data will be created. This function will not be introduced in the subclasses later.
+  Create a `Data` object for the result, if `flag` is `True`, `apply_i` will be called to compute the value of the generated data. All classes that inherit from `Rule` need to implement this method. For example, `Filter` creates the result data object based on its own type and the type of the source data. If the source data is `Type.Matrix` and the filter itself is `Type.Scalar`, then a `Type.Vector` result data will be created. This function will not be introduced in the subclasses later.
 - `def apply_i(self, i, flag=True):`
   Compute the result for the `i`th `source_data`. All classes that inherit from Rule need to implement this method. For example, the `Aggregation` class aggregates the source data according to particular dimension and updates the result data object with the calculated value.
-- Other funtions no need to be called by developers or be implemented by subclass.
+- Other functions no need to be called by developers or be implemented by the subclass.
 ### Filter
 - Variables specific to this subclass:
   - `filter_type`: Similar to `type` in `Data`. Currently, there are three possible values: `Type.Scalar`, `Type.Vector` and `Type.Matrix`.
@@ -184,12 +183,12 @@ Developers can perform any complex and holistic transformations on data base on 
   Perform `result_data[i].value = f(source_data[i].value)`. The associated data of the result data will also be updated immediately if `flag` is `True`. Otherwise, they will be updated when needed.
 
 # View Module
-View is the basic unit for constructing interfaces in NNVisBuilder. In NNVisBuilder, views refer to some commonly used charts when building visual analysis interfaces, including scatter plots, line charts, parallel coordinate plots, galleries, etc. These views are composed of basic elements such as points, lines, and images. NNVisBuilder provides a rich set of view types, which can usually meet the needs of developers to build interfaces. If developers have special view requirements, they can also customize views by extending the base view class. After calling `builder.run()`, Builder will convert the defined views into frontend code and combine them into an HTML file. Interactions can be defined on the view. The view module also includes a `Highlighter` class that is related to interactions.
+The view is the basic unit for constructing interfaces in NNVisBuilder. In NNVisBuilder, views refer to some commonly used charts when building visual analysis interfaces, including scatter plots, line charts, parallel coordinate plots, galleries, etc. These views are composed of basic elements such as points, lines, and images. NNVisBuilder provides a rich set of view types, which can usually meet the needs of developers to build interfaces. If developers have special view requirements, they can also customize views by extending the base view class. After calling `builder.run()`, `Builder` will convert the defined views into frontend code and combine them into an HTML file. Interactions can be defined on the view. The view module also includes a `Highlighter` class that is related to interactions.
 
 ## View (Base Class)
 All view classes inherit from this class. In this part, we will introduce some functions that developers usually need to use (by calling them in subclasses).
 - key variables
-  - `update_list`(class variable): A list that stores the idx of views to be redrawed.
+  - `update_list`(class variable): A list that stores the idx of views to be redrawn.
   - `highlight_list`(class variable): A list that stores the idx of views to be highlighted.
   - `idx`: The index of view view used to distinguish different views.
   - `position`: The position of the view.
@@ -198,12 +197,12 @@ All view classes inherit from this class. In this part, we will introduce some f
   - `data`: In general, a view needs to be bound to at least one data. Therefore, we define a data variable in the base class. If subclasses need more data, they can define them additionally in the subclass.
   - `highlighter`: It stores the IDs of the elements that need to be highlighted (subset information) and specifies how the view responds to the subset information. The highlighter will be introduced in more detail in the `Highlighter` section.
   - Other view parameters: `wrap` (whether the view has a rectangle border), `opacity` (the opacity of the view), ...
-- `def __init__(self, data, position, size=None, highlighter=None, title=None, border=True, , opacity=1):` (Some parameters like `stroke-width` for setting the stroke width of border are omitted.)
+- `def __init__(self, data, position, size=None, highlighter=None, title=None, border=True, opacity=1):` (Some parameters like `stroke-width` for setting the stroke width of the border are omitted.)
   Constructor. If `data` is not of the `Data` class, NNVisBuilder will automatically wrap it.
 - `def set_position(self, position):`
   Modifies the `position` attribute. If the length of parameter `position` is 4, then the `size` attribute will be modified based on the last two values.
 - `def align(self, info='', view=None, padding=0):`
-  This function returns a four-tuple containing the position and size, which is used for alignment between views. `info` is a `str` that contains the following patterns: if the pattern `right(next, a)` is included, then the x position returned is offset by `a + size[0]` to the right of the current view position (`a` can be negative). If next is not specified, the returned position will only be offset by `a`. The pattern `under(next, b)` is similar. If the view parameter is not specified, the size returned is equal to the size of the current view. Otherwise, the returned size will make the distance between the boundary of the new view and the boundary of `view` equal to `padding`.
+  This function returns a four-tuple containing the position and size, which is used for alignment between views. `info` is an `str` that contains the following patterns: if the pattern `right(next, a)` is included, then the x position returned is offset by `a + size[0]` to the right of the current view position (`a` can be negative). If `next` is not specified, the returned position will only be offset by `a`. The pattern `under(next, b)` is similar. If the view parameter is not specified, the size returned is equal to the size of the current view. Otherwise, the returned size will make the distance between the boundary of the new view and the boundary of `view` equal to `padding`.
 - `def onclick(self, f):`
   Set the click event handler. When the click event occurs, `f` will be called and the ID of the clicked element will be passed to `f` as the parameter. This ID is not exactly the same for each view type, and we will introduce the subset information for each view subclass separately in the Interaction Section.
   The form of `f` is as follows:
@@ -216,7 +215,7 @@ All view classes inherit from this class. In this part, we will introduce some f
   ```
 - `def on_brush(self, f):`
   Similar to the above. When the brush event occurs, `f` will be called.
-- Other funtions no need to be called by developers.
+- Other functions no need to be called by developers.
 ## Implementation & Customized View
 In this part, we will introduce the implementation of view drawing and interaction, as well as some related functions. If developers do not need to customize views, they can skip this part.
 ### Implementation
@@ -227,7 +226,7 @@ NNVisBuilder uses a frontend backend architecture. To draw views, NNVisBuilder g
 trigger{idx}.on('click', e => {{
     d3.json('trigger/{idx}').then(r => {{
         // Component I: Draw the elements.
-        //r: a list of dicts, each dict store the attributes of one element.
+        //r: a list of dicts, each dict stores the attributes of one element.
         g{self.idx}.selectAll('xxx')
             .data(r).enter().append('xxx')
             .attr('a', d => d.a)
@@ -235,7 +234,7 @@ trigger{idx}.on('click', e => {{
             .on('click', e => {{
                 //Component II: Transfer the frontend click event 
                 //to the backend for processing. 
-                //r[0]: the id list of views that need to be redrawed.
+                //r[0]: the id list of views that need to be redrawn.
                 //r[1]: the id list of views that need to be highlighted.
                 ... // get clicked element id first
                 d3.json('click/{idx}?value=click_id', r => {{
@@ -261,11 +260,11 @@ highlighter{idx}.on('click', e => {{
 }});
 ```
 The built-in group variable `g` is used to contain all elements of the view. Variables `trigger` and `highlighter` are used to trigger drawing and highlighting events respectively. These variables are stored in the `triggers` and `highlighters` lists. The names of these variables are suffixed with the `idx` of the view to distinguish between different variables.
-The code for drawing the view is located in the event handler of `trigger`. When a click event is trigger by `trigger`, the frontend will call `d3.json` to request data from the backend. After receiving the trigger signal, the backend will call the `generate_vis_data` function of the corresponding view, convert the data stored in the view to a `pandas.DataFrame` object (may be further wrapped as a `Dict` by adding other parameters), and then serialize it to JSON and pass it to the frontend. The returned JSON is stored in the parameter r in the frontend. In Component I, we use the interface provided by `D3` to draw elements based on the returned data.
+The code for drawing the view is located in the event handler of `trigger`. When a click event is triggered by `trigger`, the frontend will call `d3.json` to request data from the backend. After receiving the trigger signal, the backend will call the `generate_vis_data` function of the corresponding view, convert the data stored in the view to a `pandas.DataFrame` object (may be further wrapped as a `Dict` by adding other parameters), and then serialize it to JSON and pass it to the frontend. The returned JSON is stored in the parameter r in the frontend. In Component I, we use the interface provided by `D3` to draw elements based on the returned data.
 The event handler for elements is defined in Component II. We first obtain the ID of the clicked element, and then call `d3.json` to pass the ID as arguments to the backend. The backend will then call the click handler of the corresponding view and modify some data, transformations, and subset information. NNVisBuilder updates all the data based on the relationships between the data (relationships between highlighters can also be defined, which will be explained in the Interaction part), and returns the merged list of relevant view IDs and the list of view IDs to be highlighted to the frontend. The frontend uses this returned result to trigger the corresponding `trigger` or `highlighter` to redraw or highlight the view.
 In component III, we use the same logic as defining the view drawing to define the view highlighting behavior. The `r` obtained from the `d3.json` request here is the subset information saved in the `highlighter`. The code enclosed in the dotted line specifies how the element responds to subset information. This part of the code is usually saved in the `highlighter` and can be generated directly by calling `highlighter.core()`.
 Figure 1: the pipeline of drawing (a), highlighting (b) and interaction (c). Ellipses represent data, rectangles represent processes in the backend, and rounded rectangles represent processes in the frontend. The blue parts represents the parts that developers need to write when extending the view. The "highlight elements" part is typically generated by the `Highlighter`. In other words, developers usually only need to complete the code for drawing elements and the `generate_vis_data` function to extend the view.
-![Alt text](pipe-1.png)
+![Alt text](dataflow.png)
 ### Backend Function
 These are some functions related to the process above in the `View` class.
 - `def core(self):`
@@ -304,7 +303,7 @@ class ScatterPlot(View):
                 //...;
         """)
 ```
-When extending the view, developers can specify additional data required in the constructor. The code for converting the data into a `DataFrame` object need to be written in the `generate_vis_data` function. The frontend code for drawing elements need to be written as the parameter of `self.draw` in the `core` function.
+When extending the view, developers can specify additional data required in the constructor. The code for converting the data into a `DataFrame` object needs to be written in the `generate_vis_data` function. The frontend code for drawing elements needs to be written as the parameter of `self.draw` in the `core` function.
 
 ## Built-in Views
 For each subclass of the view, we will not provide the signature of the constructor. Instead, we introduce the meaning of data in each view and its unique parameters. At the same time, if the value passed to a parameter is not a `Data` object, it will be automatically wrapped as a `Data` object. If a specific parameter is `Type.Scalar` but the main attribute `data` is not, this parameter will be automatically expanded to the shape corresponding to `data`.
@@ -339,7 +338,7 @@ The functionality of this class is covered by the heatmap, but we keep this clas
   - `cell_size`: `Tuple`. The size of each word. If specified, the `size` of view will be invalid.
   - `orient`: `str`, it can be `horizontal` or `vertical`, representing the orient of the words.
 ### ParallelCoordinate
-This view class defines brush event.
+This view class defines the brush event.
 - `def __init__(...):`
   - `data`: `Type.Matrix` with shape `(n, m)`. `n` represents the number of lines, and `m` represents the steps of each line.
   - `x_titles`: `Type.Vector`. The texts displayed on the x-axis.
@@ -363,9 +362,9 @@ Similar to `BarChart`.
 ### Other View Classes
 Some view classes are customized for specific tasks in practice, such as the `ToolTip` that displays specific widgets in a floating window.
 ### Widget
-NNVisBuilder provides some widgets, which can be considered as views that do not need to bind data. In addition to not requiring data binding, the use of widgets is basically the same as views. Users can input some information through the widget on the interface and process this information through the event handler of the widget. NNVisBuilder currently provides the following widget classes: `Silder`, `Input` (input string information), `Select` (dropdown box) and `Button`.
+NNVisBuilder provides some widgets, which can be considered as views that do not need to bind data. In addition to not requiring data binding, the use of widgets is basically the same as views. Users can input some information through the widget on the interface and process this information through the event handler of the widget. NNVisBuilder currently provides the following widget classes: `Silder`, `Input` (input string information), `Select` (dropdown box), and `Button`.
 ## Classes for Highlighting
-In the NNVisBuilder framework, interactions can be summarized as modifications to data, transformations, or subset information. Modifications to data or transformations will cause the view to be redrawn, while modifications to subset information will cause the view to highlight. The Data module includes the `Highlighter` class and the `MultiHighlighter` class to manage the highlight behavior of views.
+In the NNVisBuilder framework, interactions can be summarized as modifications to data, transformations, or subset information. Modifications to data or transformations will cause the view to be redrawn, while modifications to subset information will cause the view to highlight. The data module includes the `Highlighter` class and the `MultiHighlighter` class to manage the highlighting behavior of views.
 ### Highlighter
 A class that saves subset information and specifies highlight behavior.
 - key variables:
@@ -381,7 +380,7 @@ A class that saves subset information and specifies highlight behavior.
 - `def update(self, value):`
   Similar to `update` in `Filter`, modify the `self.value` based on the `value` and call the mapping in `mappings`. The view id in `views` will be stored in `View.highlight_list`.
 - `def add_mapping(self, f):`
-  Add the mapping need to be called when subset information changed. The subset information will be passed into `f`.
+  Add the mapping need to be called when subset information changes. The subset information will be passed into `f`.
   The form of `f` is as follows:
   ```python
   def f(value):
