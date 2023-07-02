@@ -1,5 +1,3 @@
-(This PDF document is converted from a Markdown file. Please visit [the online Markdown document](https://github.com/NaClSSS/NVB/blob/main/documents/manual.md) for a better viewing experience.)
-
 NNVisBuilder is a toolkit used to quickly prototype interactive visual analysis interfaces for neural networks. The interface built with NNVisBuilder is organized in views. Views are bound to data, and when the bound data changes, the views change accordingly. Developers can define interactions on views and modify the values of data within the interactions to achieve different interaction effects. NNVisBuilder mainly includes the implementation of three modules: the builder module, the data module, and the view module. The builder module is used to obtain data related to neural networks. The data module defines the tensor data class and various transformation classes on data. The view module contains the definitions of different views.
 
 - [Builder Module](#builder-module)
