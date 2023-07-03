@@ -103,3 +103,5 @@ As a toolkit specialized for neural networks, NNVisBuilder is designed to:
 3. Other transformations: Other transformations like TSNE can also be added to the relationship tree (participating in dynamic response after modifying the data) by using `data.apply_transform(OtherTransform(tsne))`. If the TSNE transformation does not need to record relationships, it can be used directly with `tsne(data)`.
 
 Further explanations, detailed instructions, user manuals, and API documents will be provided in the future.
+
+Please refer to [this manual](https://github.com/NaClSSS/NVB/blob/main/documents/manual.md) for more information on implementation and API.
