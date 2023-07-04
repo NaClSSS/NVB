@@ -19,7 +19,7 @@ class Builder:
     views = []
     widgets = []
 
-    def __init__(self, model, input_=None, **info):
+    def __init__(self, model=None, input_=None, **info):
         self.model = model
         if model:
             # 没有model的情况是用来方便测试视图的
@@ -32,7 +32,8 @@ class Builder:
         self.targets = info.get('targets')
         # a heavy bottom to improve
         # self.grads = {}
-        self.hooks = []
+        self.hooks = {}
+        self.hooks_list = []
         self.embeddings = {}
         self.connections = {}
         # for stage 1
@@ -74,7 +75,7 @@ class Builder:
         for layer in self.connections:
             self.connections[layer] = torch.cat((self.connections[layer], self.name2module[layer].weight.detach().unsqueeze(0).cpu()), 0)
 
-    def add_hiddens(self, layers, cat_dim=0, stage=0, f=None):
+    def add_hiddens(self, layers, cat_dim=0, stage=0, component=None, activate=True):
         if not isinstance(layers, list):
             layers = [layers]
         # 但是考虑到可能随着torch版本变化需要，先留着
@@ -88,20 +89,15 @@ class Builder:
         #             m = dict(m.named_modules())[a]
         #     self.embeddings[layer] = torch.Tensor([])
         #     self.hooks.append(m.register_forward_hook(get_hook(layer)))
-        if stage == 0:
+        if stage == 0 or stage == 'all':
             for layer in layers:
                 self.embeddings[layer] = torch.Tensor([])
-                self.hooks.append(self.name2module[layer].register_forward_hook(
-                    self.get_hook(layer, cat_dim, 0, rnn_extract_output if f == 'rnn' else f)))
-        elif stage == 1:
+                self.hooks[layer] = self.get_hook(layer, cat_dim, 0, rnn_extract_output if component == 'rnn' else component)
+                if activate:
+                    self.hooks_list.append(self.name2module[layer].register_forward_hook(self.hooks[layer]))
+        if stage == 1 or stage == 'all':
             for layer in layers:
-                self.hooks_1[layer] = self.get_hook(layer, cat_dim, 1)
-        elif stage == 'all':
-            for layer in layers:
-                self.embeddings[layer] = torch.Tensor([])
-                self.hooks.append(self.name2module[layer].register_forward_hook(
-                    self.get_hook(layer, cat_dim, 0, rnn_extract_output if f == 'rnn' else f)))
-            for layer in layers:
+                self.embeddings_1[layer] = torch.Tensor([])
                 self.hooks_1[layer] = self.get_hook(layer, cat_dim, 1)
 
     # def add_view(self, layer_name, view_class, transform=None, position=None, size=None, name=None, **view_info):
@@ -186,10 +182,10 @@ class Builder:
             self.embeddings_g[layer] = torch.Tensor([])
 
     def get_hook_g(self, name):
+        # maybe integrated into get_hook
         def hook(model, input, output):
             self.embeddings_g[name] = torch.cat((self.embeddings_g[name], output.detach().cpu()), 0)
         return hook
-
 
     def forward(self, batch_size=32, mode=0):
         # # i really convince
@@ -197,6 +193,7 @@ class Builder:
         #     # it's temp
         #     if name != 'attn':
         #         self.add_hook(name)
+        self.model.eval()
         if mode == 1:
             b = 0
             print(len(self.input))
@@ -216,7 +213,7 @@ class Builder:
             if batch_size > c:
                 batch_size = c
             with torch.no_grad():
-                while batch_size * (i + 1) <= c:
+                while batch_size * i < c:
                     print('---------- %d / %d' % (batch_size * i, c))
                     a = self.input[batch_size * i:batch_size * (i + 1)]
                     self.model(a.to(self.device))
@@ -338,11 +335,21 @@ class Builder:
     def reset_embedding(self):
         for layer in self.hooks_1:
             self.embeddings_1[layer] = torch.Tensor([])
-        # why clear this? need to summarize
+        # why(not) clear these(self.embeddings)? maybe not proper, need to summarize
         for layer in self.embeddings_g:
             self.embeddings_g[layer] = torch.Tensor([])
         for layer in self.connections:
             self.connections[layer] = torch.Tensor([])
+
+    def activate_hooks(self):
+        if len(self.hooks_list) == 0:
+            for layer in self.hooks:
+                self.hooks_list.append(self.name2module[layer].register_forward_hook(self.hooks[layer]))
+
+    def deactivate_hooks(self):
+        for hook in self.hooks_list:
+            hook.remove()
+        self.hooks_list.clear()
 
     def run(self, file_name='templates/index.html', batch_size=64, mode=0, foward_manual=True, auto_open=False, **info):
         if self.model:
@@ -354,7 +361,7 @@ class Builder:
                 if len(self.embeddings_g.keys()) != 0:
                     self.forward_b(batch_size)
             # remove hook in stage 0 and add hook in stage 1 to save storage.
-            for hook in self.hooks:
+            for hook in self.hooks_list:
                 hook.remove()
             for layer in self.hooks_1:
                 self.name2module[layer].register_forward_hook(self.hooks_1[layer])

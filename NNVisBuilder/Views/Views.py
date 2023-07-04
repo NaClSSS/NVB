@@ -15,35 +15,49 @@ from NNVisBuilder.Views import View
 # add record click position base on params after
 class ScatterPlot(View):
     def __init__(self, data, position=[100, 100], size=None, highlighter=None, title=None, point_size=circle_config['r'],
-                 colors=None, color_labels=None, cm=circle_config['cm1'], opacity=circle_config['opacity'],
-                 click_view=False, highlight_border=False):
+                 colors=None, color_labels=None, cm=circle_config['cm1'], opacity=circle_config['opacity'], border_color='black',
+                 click_view=False, highlight_border=False, save_range=False):
         """
         :param info: reg_no
         """
-        super(ScatterPlot, self).__init__(data, position, size, highlighter, title=title)
-        self.point_size = point_size
-        if isinstance(point_size, Data):
+        super(ScatterPlot, self).__init__(data, position, size, highlighter, title=title, stroke_color=border_color)
+        if point_size is not None:
+            if not isinstance(point_size, Data):
+                point_size = Data(point_size)
             point_size.views.append(self)
-        self.colors = colors
-        self.color_labels = color_labels
+        self.point_size = point_size
         self.cm = cm
         self.opacity = opacity
         self.click_view = click_view
         self.highlight_border = highlight_border
-        if isinstance(colors, Data):
+        if colors is not None:
+            if not isinstance(colors, Data):
+                colors = Data(colors)
             colors.views.append(self)
-        if isinstance(color_labels, Data):
+        self.colors = colors
+        if color_labels is not None:
+            if not isinstance(color_labels, Data):
+                color_labels = Data(color_labels)
             color_labels.views.append(self)
+        self.color_labels = color_labels
         if highlighter is not None and highlighter.core() is None:
             highlighter.set_style(circle_config['style'])
+        self.xs = None
+        self.ys = None
+        self.save_range = save_range
 
     def generate_vis_data(self):
         if isinstance(self.data, Data):
             value = self.data.value_().copy()
         else:
             value = self.data.copy()
-        x0, x1 = np.min(value[:, 0]), np.max(value[:, 0])
-        y0, y1 = np.min(value[:, 1]), np.max(value[:, 1])
+        if len(value) == 0:
+            return json.dumps([])
+        if not self.save_range or self.xs is None:
+            self.xs = [np.min(value[:, 0]), np.max(value[:, 0])]
+            self.ys = [np.min(value[:, 1]), np.max(value[:, 1])]
+        x0, x1 = self.xs
+        y0, y1 = self.ys
         value[:, 0] = (0.01 + 0.98 * ((value[:, 0] - x0) / (x1 - x0))) * self.size[0]
         value[:, 1] = self.size[1] - (0.01 + 0.98 * ((value[:, 1] - y0) / (y1 - y0))) * self.size[1]
         data = pd.DataFrame()
@@ -69,7 +83,7 @@ class ScatterPlot(View):
                 colors_ = colors_.reshape(-1).tolist()
             colors_ = list(map(lambda x: colors.to_hex(cm(x), keep_alpha=True), colors_))
         data['color'] = colors_
-        data['r'] = self.point_size
+        data['r'] = self.point_size.value_()
         data['idx'] = list(range(data.shape[0]))
         return data.to_json(orient='records')
 
@@ -138,7 +152,6 @@ highlighter{self.idx}.on('click', e => {{
         if self.click_view:
             View.f.write(f"""
 g{self.idx}.select('rect.border_')
-    .attr('fill', 'white')
     .attr('opacity', 0.4)
     .on('click', e => {{
         d3.selectAll('rect.border_').attr('stroke-width', 1);
@@ -152,6 +165,7 @@ g{self.idx}.select('rect.border_')
 
     def click(self, request_args):
         value = int(request_args.get('value'))
+        self.last_value = value
         View.update_list.clear()
         View.highlight_list.clear()
         if self.click_ is not None:
@@ -159,7 +173,6 @@ g{self.idx}.select('rect.border_')
                 self.click_(value, [self.position[0]+self.size[0]/2, self.position[1]+self.size[1]/2])
             else:
                 self.click_(value)
-        print(View.update_list)
         return json.dumps([View.update_list, View.highlight_list])
 
     def brush(self, request_args):
@@ -184,6 +197,68 @@ class LineChart(View):
         pass
 
 
+class Tooltip1(View):
+    def __init__(self, data, position=[100, 100], size=None):
+        super(Tooltip1, self).__init__(data, position, size, border=False)
+
+    def generate_vis_data(self):
+        return json.dumps(self.data.value_().tolist())
+
+    def core(self):
+        super(Tooltip1, self).core()
+        View.f.write(f"""
+trigger{self.idx}.on('click', e => {{
+    d3.json('/trigger/{self.idx}').then(r => {{
+        console.log(x_click, y_click, 'fff');
+        toolTip.attr('style', 'left:' + x_click + 'px' + ';top:' + y_click + 'px').selectAll('*').remove();
+        toolTip.style('height', '70px').style('width', '120px').on('click', e => {{
+            // toolTip.classed('hidden', true);
+        }});
+        toolTip.selectAll('input')
+            .data(r).enter().append('input')
+            .attr('value', d => d.toFixed(2))
+            .style('width', '112px')
+            .attr('id', (d, i) => `input{self.idx}_${{i+1}}`);
+        toolTip.append('button')
+            .text('update')
+            .style('position', 'absolute')
+            .style('top', '50px')
+            .style('left', '5px')
+            .style('width', '60px')
+            .on('click', e => {{
+                toolTip.classed('hidden', true);
+                const v1 = document.getElementById('input{self.idx}_1').value, v2 = document.getElementById('input{self.idx}_2').value;
+                d3.json(`/click/{self.idx}?v1=${{v1}}&v2=${{v2}}`).then(r => {{
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                }});
+            }});
+        toolTip.append('button')
+            .text('cancel')
+            .style('position', 'absolute')
+            .style('top', '50px')
+            .style('left', '65px')
+            .style('width', '60px')
+            .on('click', e => {{
+                toolTip.classed('hidden', true);
+            }});
+        toolTip.classed('hidden', false);
+    }});
+}});
+        """)
+
+    def click(self, request_args):
+        v1 = float(request_args.get('v1'))
+        v2 = float(request_args.get('v2'))
+        # special no need add update_list
+        self.data.update([v1, v2])
+        View.update_list.clear()
+        View.highlight_list.clear()
+        self.click_(v1, v2)
+        print(View.update_list)
+        return json.dumps([View.update_list, View.highlight_list])
+
+
 class Tooltip(View):
     def __init__(self, data, position=[100, 100], size=None, prefix='', suffix='png'):
         super(Tooltip, self).__init__(data, position, size, border=False)
@@ -204,7 +279,6 @@ class Tooltip(View):
         View.f.write(f"""
 trigger{self.idx}.on('click', e => {{
     d3.json('/trigger/{self.idx}').then(r => {{
-        console.log(r);
         toolTip1.attr('style', 'left:' + r['position'][0] + 'px' + ';top:' + r['position'][1] + 'px').selectAll('*').remove();
         toolTip1.style('height', '88px').style('width', '200px').on('click', e => {{
             toolTip1.classed('hidden', true);
@@ -267,7 +341,6 @@ trigger{self.idx}.dispatch('click');
                 self.click_(self.prefix, [self.position[0] + self.size[0] * 1.8 / 2, self.position[1] + self.size[1] * 1.8 / 2])
             else:
                 self.click_(self.prefix)
-        print(View.update_list)
         return json.dumps([View.update_list, View.highlight_list])
 
 
@@ -567,7 +640,7 @@ trigger{self.idx}.on('click', e => {{
 
 class ParallelCoordinate(View):
     def __init__(self, data, position=[100, 100], size=[1250, 300], highlighter=None, title=None, x_titles=None,
-                 threshold=None, selector='on_threshold', colors=None):
+                 threshold=None, selector='on_threshold', colors=None, legend=None):
         """
         :param data: matrix type
         :param threshold: default set to None to enable no threshold, for demonstration we set it to 0.
@@ -618,6 +691,7 @@ class ParallelCoordinate(View):
                 threshold = Data(threshold)
             threshold.views.append(self)
         self.threshold = threshold
+        self.legend = legend
 
     def generate_vis_data(self):
         r = {}
@@ -694,7 +768,7 @@ trigger{self.idx}.on('click', () => {{
             .attr('d', d => line{self.idx}(d.path.map(v => [sx{self.idx}(v[0]), sy{self.idx}(v[1])])))
             .attr('stroke', d => d.color)
             .attr('fill', 'none')
-            .attr('opacity', 0.6);
+            .attr('opacity', 1);
         if(r['threshold'].length != 0) threshold{self.idx} = r['threshold'][0]['value'];
         g{self.idx}.selectAll('path.b').remove();
         g{self.idx}.selectAll('path.b')
@@ -713,8 +787,30 @@ highlighter{self.idx}.on('click', e => {{
     d3.json('/highlighter/{self.idx}').then(r => {{
         g{self.idx}.selectAll('path.a'){self.highlighter.core() if self.highlighter is not None else ';'}
     }});
-}});
-            """)
+}});""" + (f"""
+var dl = {self.legend};
+var gl = g{self.idx}.append('g').attr('transform', `translate(${{rw{self.idx}-130}}, ${{rh{self.idx}-110}})`)
+gl.append('rect')
+    .classed('c', true)
+    .attr('x', 0).attr('y', 0)
+    .attr('opacity', 0.1)
+    .attr('width', 134).attr('height', 110)
+    .attr("fill", 'gray');
+gl.selectAll('path.c')
+    .data(dl).enter().append('path')
+    .classed('c', true)
+    .attr('d', (d, i) => d3.line()([[5, 10+30*i], [50, 10+30*i]]))
+    .attr('stroke', d => d.color);
+gl.selectAll('text.c')
+    .data(dl).enter().append('text')
+    .classed('c', true)
+    .attr('fill', 'black')
+    .attr('x', d => 55)
+    .attr('y', (d, i) => 10+30*i)
+    .attr('dy', '.35em')
+    //.attr('text-anchor', 'middle')
+    .text(d => d.label);
+        """ if self.legend is not None else ''))
 
     def brush(self, request_args):
         value = request_args.get('value')
@@ -769,7 +865,10 @@ class BarChart(View):
         if highlighter is not None and highlighter.core() is None:
             highlighter.set_style(barchart_config['bc_red'])
         self.max_value = max_value
-        self.max_value1 = 0
+        if titles is not None:
+            if not isinstance(titles, Data):
+                titles = Data(titles)
+            titles.views.append(self)
         self.titles = titles
         self.show_titles = show_titles
         self.padding = padding
@@ -778,26 +877,19 @@ class BarChart(View):
         r = {}
         data = pd.DataFrame()
         if self.max_value is None:
-            self.max_value1 = self.data.value_().max()
+            max_value = self.data.value_().max() * 20 / 19
         else:
-            self.max_value1 = self.max_value
-        data['height'] = 0.95 * self.size[1] / self.max_value1 * self.data.value_()
+            max_value = self.max_value
+        data['height'] = 0.95 * self.size[1] / max_value * self.data.value_()
         if self.titles is None:
             r['titles'] = list(range(data.shape[0]))
-            if self.show_titles is None:
-                r['show_titles'] = False
-            else:
-                r['show_titles'] = self.show_titles
         else:
-            r['titles'] = self.titles
-            if self.show_titles is None:
-                r['show_titles'] = True
-            else:
-                r['show_titles'] = self.show_titles
+            r['titles'] = self.titles.value_().tolist()
         data['x'] = r['titles']
         data['color'] = 'blue'
         data['idx'] = list(range(data.shape[0]))
         r['rect'] = data.to_dict(orient='records')
+        r['max_value'] = float(max_value)
         return json.dumps(r)
 
     def core(self):
@@ -806,11 +898,11 @@ class BarChart(View):
 const sx{self.idx} = d3.scaleBand()
     .range([0, rw{self.idx}]).padding({self.padding});
 const sy{self.idx} = d3.scaleLinear()
-    .domain([0, {self.max_value1 * 20 / 19}])
     .range([rh{self.idx}, 0]);
 trigger{self.idx}.on('click', () => {{
     d3.json('/trigger/{self.idx}').then(r => {{
         sx{self.idx}.domain(r['titles']);
+        sy{self.idx}.domain([0, r['max_value']]);
         {self.axis()}
         g{self.idx}.selectAll('rect.a').remove();
         g{self.idx}.selectAll('rect.a')
@@ -823,6 +915,9 @@ trigger{self.idx}.on('click', () => {{
             .attr('stroke', d => d.color)
             .attr('fill', d => d.color)
             .on('click', e => {{
+                // all need to record position
+                y_click = e.clientY + document.documentElement.scrollTop;
+                x_click = e.clientX + document.documentElement.scrollLeft;
                 d3.json(`/click/{self.idx}?value=${{{select_this}.datum().idx}}`).then(r => {{
                     for(let i of r[0]) triggers[i].dispatch('click');
                     for(let i of r[1]) highlighters[i].dispatch('click');
@@ -840,6 +935,7 @@ highlighter{self.idx}.on('click', e => {{
 
     def click(self, request_args):
         value = int(request_args.get('value'))
+        self.last_value = value
         View.update_list.clear()
         View.highlight_list.clear()
         self.click_(value)
@@ -847,11 +943,146 @@ highlighter{self.idx}.on('click', e => {{
 
     def axis(self):
         return f"""
-const ax{self.idx} = d3.axisBottom(sx{self.idx}), ay{self.idx} = d3.axisLeft(sy{self.idx});
-if(r['show_titles'] == false) ax{self.idx}.tickFormat('');
-g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none');
-g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
+const ax{self.idx} = d3.axisBottom(sx{self.idx}).tickSizeOuter(0), ay{self.idx} = d3.axisLeft(sy{self.idx});
+g{self.idx}.selectAll('g[class*=axis_]').remove();
+g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none')
+.classed('axis_x', true)""" + (f".selectAll('.tick').remove()" if self.titles is None else '') + f""";
+g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none').classed('axis_y', true);
+g{self.idx}.selectAll('.tick line').attr('stroke', '#d3d3d3');
+g{self.idx}.select('.axis_x').selectAll('.tick line').attr('stroke', 'white');
+g{self.idx}.selectAll('.tick text').attr('fill', '#708090');
         """.strip() + "\n"
+
+
+class PointChart(View):
+    def __init__(self, data, position, size, data1=None, highlighter=None, titles=None, show_titles=None, padding=0.2, title=None, e_idx=None):
+        """
+        info: max_height, reg_no
+        """
+        if not isinstance(data, Data):
+            data = Data(data)
+        super(PointChart, self).__init__(data, position, size, highlighter, title=title, border=False)
+        if highlighter is not None and highlighter.core() is None:
+            highlighter.set_style(barchart_config['bc_red'])
+        if titles is not None:
+            if not isinstance(titles, Data):
+                titles = Data(titles)
+            titles.views.append(self)
+        self.titles = titles
+        if data1 is not None:
+            if not isinstance(data1, Data):
+                data1 = Data(data1)
+            data1.views.append(self)
+        self.data1 = data1
+        self.show_titles = show_titles
+        self.padding = padding
+        self.e_idx = e_idx
+        # e_idx.views.append(self)
+
+    def generate_vis_data(self):
+        r = {}
+        data = pd.DataFrame()
+        m1, m2 = self.data.value_().max(), self.data.value_().min()
+        m3, m4 = self.data1.value_().max(), self.data1.value_().min()
+        m1, m2 = max([m1, m2, m3, m4]), min([m1, m2, m3, m4])
+        dist = m1 - m2
+        m1, m2 = m1+0.05*dist, m2-0.05*dist
+        data['height'] = self.size[1] / (m1 - m2) * (self.data.value_() - m2)
+        if self.titles is None:
+            r['titles'] = list(range(data.shape[0]))
+        else:
+            r['titles'] = self.titles.value_()
+        data['x'] = r['titles']
+        data['color'] = '#0095b6'
+        if self.e_idx is None or self.e_idx.value_() is None:
+            data['idx'] = list(range(data.shape[0]))
+        else:
+            data['idx'] = self.e_idx.value_()
+        r['rect'] = data.to_dict(orient='records')
+        # data1
+        data = pd.DataFrame()
+        data['height'] = self.size[1] / (m1 - m2) * (self.data1.value_() - m2)
+        data['x'] = r['titles']
+        data['color'] = '#b62100'
+        if self.e_idx is None or self.e_idx.value_() is None:
+            data['idx'] = list(range(data.shape[0]))
+        else:
+            data['idx'] = self.e_idx.value_()
+        data['color'] = 'red'
+        r['path'] = data.to_dict(orient='records')
+        r['range'] = [float(m2), float(m1)]
+        return json.dumps(r)
+
+    def core(self):
+        super(PointChart, self).core()
+        View.f.write(f"""
+const sx{self.idx} = d3.scaleBand()
+    .range([0, rw{self.idx}]).paddingInner(1).paddingOuter(0.2);
+const sy{self.idx} = d3.scaleLinear()
+    .range([rh{self.idx}, 0]);
+// maybe forward to the head() in utils.py
+var cross = d3.symbol().type(d3.symbolCross).size(10);
+trigger{self.idx}.on('click', () => {{
+    d3.json('/trigger/{self.idx}').then(r => {{
+        sx{self.idx}.domain(r['titles']);
+        sy{self.idx}.domain(r['range']);
+        {self.axis()}
+        g{self.idx}.selectAll('circle.a').remove();
+        g{self.idx}.selectAll('circle.a')
+            .data(r['rect']).enter().append('circle')
+            .classed('a', true)
+            .attr('width', d => sx{self.idx}.bandwidth())
+            .attr('height', d => d.height)
+            .attr('cx', d => sx{self.idx}(d.x))
+            .attr('cy', d => {self.size[1]} - d.height)
+            .attr('r', 2)
+            .attr('fill', d => d.color)
+            .on('click', e => {{
+                // all need to record position
+                y_click = e.clientY + document.documentElement.scrollTop;
+                x_click = e.clientX + document.documentElement.scrollLeft;
+                d3.json(`/click/{self.idx}?value=${{{select_this}.datum().idx}}`).then(r => {{
+                    for(let i of r[0]) triggers[i].dispatch('click');
+                    for(let i of r[1]) highlighters[i].dispatch('click');
+                }});
+            }});
+        g{self.idx}.selectAll('path.a').remove();
+        g{self.idx}.selectAll('path.a')
+           .data(r['path']).enter().append('path')
+           .classed('a', true)
+           .attr('fill', d => d.color)
+           .attr('transform', d => `translate(${{sx{self.idx}(d.x)}}, ${{{self.size[1]} - d.height}}) rotate(45, 0, 0)`)
+           .attr('d', cross);
+    }});
+}});
+trigger{self.idx}.dispatch('click');
+highlighter{self.idx}.on('click', e => {{
+    d3.json('/highlighter/{self.idx}').then(r => {{
+        g{self.idx}.selectAll('circle.a'){self.highlighter.core() if self.highlighter is not None else ';'}
+    }});
+}});
+        """.strip() + "\n")
+
+    def click(self, request_args):
+        value = int(request_args.get('value'))
+        self.last_value = value
+        View.update_list.clear()
+        View.highlight_list.clear()
+        self.click_(value)
+        return json.dumps([View.update_list, View.highlight_list])
+
+    def axis(self):
+        return f"""
+const ax{self.idx} = d3.axisBottom(sx{self.idx}).tickSizeOuter(0), ay{self.idx} = d3.axisLeft(sy{self.idx}).tickSizeOuter(0).tickSizeInner(4);
+g{self.idx}.selectAll('g[class*=axis_]').remove();
+g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none')
+.classed('axis_x', true)""" + (f".selectAll('.tick').remove()" if self.titles is None else '') + f""";
+g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none').classed('axis_y', true);
+g{self.idx}.selectAll('.domain').attr('stroke', '#d3d3d3');
+g{self.idx}.selectAll('.tick line').attr('stroke', '#d3d3d3');
+g{self.idx}.selectAll('.tick text').attr('fill', '#708090');
+        """.strip() + "\n"
+
 
 # class LinkMap(View):
 #     # 一个特殊的view，需要修正
@@ -919,8 +1150,84 @@ g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
 #             return ''
 
 
+class Line(View):
+    def __init__(self, data, position, size=None, color='black', width=1, opacity=1):
+        """
+        :param data: matrix type
+        if labels, don't use thin size rectangle.
+        """
+        if not isinstance(data, Data):
+            data = Data(data)
+        super(Line, self).__init__(data, position, size, border=False)
+        self.color = color
+        self.width = width
+        self.opacity = opacity
+
+    def generate_vis_data(self):
+        return json.dumps({'padding':self.data.value_().tolist(), 'color':self.color, 'width':self.width, 'opacity':self.opacity})
+
+    def core(self):
+        super(Line, self).core()
+        View.f.write(f"""
+trigger{self.idx}.on('click', () => {{
+    d3.json('/trigger/{self.idx}').then(r => {{
+        g{self.idx}.selectAll('path').remove();
+        g{self.idx}.append('path')
+            .attr('d', d3.line()([[r['padding'][0], 0], [{self.size[0]}-r['padding'][1], 0]]))
+            .attr('stroke', r['color'])
+            .attr('stroke-width', r['width'])
+            .attr('stroke-opacity', r['opacity']);
+    }});
+}});
+trigger{self.idx}.dispatch('click');
+        """)
+
+
+class Title(View):
+    def __init__(self, data, position, size=None, color='black', opacity=1, bg_color='gray'):
+        """
+        :param data: matrix type
+        if labels, don't use thin size rectangle.
+        """
+        if not isinstance(data, Data):
+            data = Data(data)
+        super(Title, self).__init__(data, position, size, border=False)
+        self.color = color
+        self.opacity = opacity
+        self.bg_color = bg_color
+
+    def generate_vis_data(self):
+        return json.dumps({'title':self.data.value_(), 'color':self.color, 'opacity':self.opacity, 'bg_color':self.bg_color})
+
+    def core(self):
+        super(Title, self).core()
+        View.f.write(f"""
+trigger{self.idx}.on('click', () => {{
+    d3.json('/trigger/{self.idx}').then(r => {{
+        g{self.idx}.selectAll('rect.a').remove();
+        g{self.idx}.append('rect')
+            .classed('a', 'true')
+            .attr('x', 0).attr('y', 0).attr('opacity', r['opacity'])
+            .attr('width', {self.size[0]}).attr('height', {self.size[1]})
+            .attr('fill', r['bg_color']);
+        g{self.idx}.selectAll('text').remove();
+        g{self.idx}.append('text')
+            .attr('fill', r['color'])
+            .attr('x', {self.size[0]} / 2)
+            .attr('y', {self.size[1]} / 2)
+            .attr('dy', '.35em')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', 16)
+            .text(r['title']);
+
+    }});
+}});
+trigger{self.idx}.dispatch('click');
+        """)
+
+
 class HeatMap(View):
-    def __init__(self, data, position, size=None, title=None, cm=None, cell_size=[20, 25], labels=None,
+    def __init__(self, data, position, size=None, title=None, cm=None, cm_highlight=None, cell_size=[20, 25], labels=None,
                  highlighter=None, selector=None, opacity=1):
         """
         :param data: matrix type
@@ -936,6 +1243,12 @@ class HeatMap(View):
         # a trick to simplify code, but easy to improve, and will be improve
         if title is not None and ('part' in title or 'pos' in title):
             self.cm = plt.get_cmap('tab20')
+        if cm_highlight is None:
+            self.cm_highlight = plt.get_cmap('Reds')
+        elif isinstance(cm, str):
+            self.cm_highlight = plt.get_cmap(cm_highlight)
+        else:
+            self.cm_highlight = cm_highlight
         self.cell_size = cell_size
         if highlighter is not None and highlighter.core() is None:
             highlighter.set_style(heat_map_config['style1'])
@@ -965,7 +1278,7 @@ class HeatMap(View):
                 data['color'] = list(
                     map(lambda x: colors.to_hex(self.cm(x), keep_alpha=True), value.reshape(-1).tolist()))
                 data['h_color'] = list(
-                    map(lambda x: colors.to_hex(plt.get_cmap('Reds')(x), keep_alpha=True), value.reshape(-1).tolist()))
+                    map(lambda x: colors.to_hex(self.cm_highlight(x), keep_alpha=True), value.reshape(-1).tolist()))
                 if len(self.data.size()) != 1:
                     self.shape = self.data.size()
                 else:
@@ -1051,20 +1364,22 @@ highlighter{self.idx}.on('click', e => {{
                 self.click_(col)
             elif self.selector == 'row':
                 self.click_(row)
+            elif self.selector == 'pos':
+                self.click_(row, col)
             else:
                 self.click_(value)
         return json.dumps([View.update_list, View.highlight_list])
 
 
 class TextView(View):
-    def __init__(self, data, position, size=None, title=None, cell_size=[35, 25], orient='vertical'):
+    def __init__(self, data, position=[50, 50], size=None, title=None, cell_size=[36, 36], orient='vertical'):
         """
         :param data: Vector type
         """
         super(TextView, self).__init__(data, position, size, title=title, border=False)
         self.cell_size = cell_size
 
-    def generate_node_position(self, selected=None):
+    def text_positions(self, selected=None):
         self.shape = self.data.size()
         if self.cell_size is None:
             if self.size is not None:
@@ -1096,6 +1411,7 @@ class TextView(View):
         else:
             width, height = self.cell_size
         # data['font_size'] = [width * 0.3 if len(w) < 6 else 4 / len(w) * width * 0.4 for w in value]
+        data['font_size'] = 19
         data['width'] = width
         data['height'] = height
         data['idx'] = list(range(data.shape[0]))
@@ -1128,10 +1444,12 @@ trigger{self.idx}.on('click', e => {{
             }});
     }});
 }});
+trigger{self.idx}.dispatch('click');
         """)
 
     def click(self, request_args):
         value = int(request_args.get('value'))
+        self.last_value = value
         View.update_list.clear()
         View.highlight_list.clear()
         if self.click_ is not None:
@@ -1169,9 +1487,9 @@ class LinkView(View):
 
     def generate_vis_data(self):
         data = pd.DataFrame()
-        value = self.node_positions.value_()
+        value = self.node_positions.value_() if self.node_positions is not None else self.data.value_()
         ends = []
-        for i in range(self.node_positions.size()[1]):
+        for i in range(value.shape[1]):
             ends.append({'source': [0, value[0][i]],
                          'target': [self.size[0], value[1][i]]})
         data['nodes'] = ends
@@ -1182,6 +1500,8 @@ class LinkView(View):
                 width = 5 * self.data.value_()
         elif self.width == 'labels':
             width = np.interp(x=self.labels.value_().__abs__(), xp=[0, 20], fp=[0.5, 10])
+        elif isinstance(self.width, Data):
+            width = self.width.value_()
         else:
             width = self.width
         data['width'] = width
@@ -1271,7 +1591,7 @@ trigger{self.idx}.dispatch('click');
         View.highlight_list.clear()
         if self.click_ is not None:
             self.click_(idx, w)
-        print(View.update_list)
+
         return json.dumps([View.update_list, View.highlight_list])
 
 

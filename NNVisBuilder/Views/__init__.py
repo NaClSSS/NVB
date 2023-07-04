@@ -111,8 +111,8 @@ class View:
         toolTip1.classed('hidden', false);
         """
 
-    def __init__(self, data, position, size=None, highlighter=None, title=None, reg_no=-1,
-                 border_color=view_config['border_color'], border=True, info={}):
+    def __init__(self, data, position, size=None, highlighter=None, title=None, reg_no=-1, stroke_width=1,
+                 stroke_color=view_config['border_color'], border=True, info={}, opacity=1, color='none', stroke_opacity=0.1):
         self.idx = View.idx
         View.idx += 1
         if position is not None and len(position) == 4:
@@ -132,10 +132,15 @@ class View:
             self.highlighter.views.append(self)
         self.reg_no = reg_no
         self.title = title
-        self.border_color = border_color
+        self.stroke_color = stroke_color
         self.wrap = border
         self.ms = None
         self.info = info
+        self.opacity = opacity
+        self.color = color
+        self.stroke_opacity = stroke_opacity
+        self.stroke_width = stroke_width
+        self.last_value = 0
         Container.handler['trigger%d' % self.idx] = self.generate_vis_data
         Container.handler['highlight%d' % self.idx] = self.highlight
         Container.handler['c%d' % self.idx] = self.click
@@ -144,8 +149,8 @@ class View:
             # if isinstance(data, Data) will be better, but this helps discover errors.
             data.views.append(self)
         View.views.append(self)
-        self.click_ = lambda value: self.highlighter.update(value)
-        self.brush_ = lambda value: self.highlighter.update(value)
+        self.click_ = (lambda value: self.highlighter.update(value)) if self.highlighter is not None else None
+        self.brush_ = (lambda value: self.highlighter.update(value)) if self.highlighter is not None else None
 
     def set_position(self, position):
         if len(position) == 2:
@@ -182,18 +187,27 @@ const brush{self.idx} = d3.brush().on("start", () => {{
 g{self.idx}.append('rect')
     .classed('border_', true)
     .attr('x', 0).attr('y', 0)
+    .attr('opacity', {self.opacity})
     .attr('width', rw{self.idx}).attr('height', rh{self.idx})
-    .attr("fill", 'none')
-    .attr('stroke', '{self.border_color}');
+    .attr("fill", '{self.color}')
+    .attr('stroke', '{self.stroke_color}')
+    .attr('stroke-width', {self.stroke_width})
+    .attr('stroke-opacity', {self.stroke_opacity})
+    .on('click', e => {{
+        d3.json(`/click/{self.idx}?value=-1`).then(r => {{
+            for(let i of r[0]) triggers[i].dispatch('click');
+            for(let i of r[1]) highlighters[i].dispatch('click');
+        }});
+    }});
         """ if self.wrap else '') + (self.ms.core() if self.ms is not None else '') +
                      (f"""
 g{self.idx}.append('text')
     .classed('title_', true)
     .attr('fill', 'black')
-    .attr('x', 0)
-    .attr('y', -20)
+    .attr('x', -18)
+    .attr('y', -10)
     //.attr('text-anchor', 'middle')
-    .attr('font-size', '10')
+    .attr('font-size', '12')
     .text('{self.title}');
                      """ if self.title is not None else '')
                      )
@@ -201,8 +215,9 @@ g{self.idx}.append('text')
     def axis(self):
         return f"""
 const ax{self.idx} = d3.axisBottom(sx{self.idx}), ay{self.idx} = d3.axisLeft(sy{self.idx});
-g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none');
-g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
+g{self.idx}.selectAll('g[class*=axis_]').remove();
+g{self.idx}.append('g').call(ax{self.idx}).attr('transform', 'translate(0, {self.size[1]})').attr('fill', 'none').classed('axis_x', true);
+g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none').classed('axis_y', true);
         """.strip() + "\n"
 
     def generate_vis_data(self):
@@ -214,6 +229,9 @@ g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
 
     def onclick(self, f):
         self.click_ = f
+
+    def trigger_click(self):
+        self.click_(self.last_value)
 
     def brush(self, request_args):
         pass
@@ -229,7 +247,7 @@ g{self.idx}.append('g').call(ay{self.idx}).attr('fill', 'none');
         size = self.size.copy()
         info = info.split('),')
         for s in info:
-            a = re.findall('-?\d+\.?\d+', s)
+            a = re.findall('-?\d+', s)
             if 'right' in s:
                 if len(a) != 0:
                     position[0] += int(float(a[0]))

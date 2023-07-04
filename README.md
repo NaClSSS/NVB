@@ -1,6 +1,6 @@
 # Getting started with NVB
 
-To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the relevant dataset will be automatically downloaded first. If you run `lstmvis.py`, you need to manually download eng-fra.txt from the data folder at https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s and place it in the data folder, and download encoder.pth and decoder.pth from the model folder and place them in the model folder.
+To use NVB, first run `mlp.py` and see how it works. If you run `cnn.py`, the relevant dataset will be automatically downloaded first. If you run `lstm.py`, you need to manually download eng-fra.txt from the data folder at https://pan.baidu.com/s/1O8_qOEgoXKgUK0CyxIc3-g?pwd=ws8s and place it in the data folder, and download encoder.pth and decoder.pth from the model folder and place them in the model folder.
 
 (When selecting a dataset in the `mlp.py` interface, you need to click on the circle on the left side to trigger, and it will be optimized in the future.)
 
