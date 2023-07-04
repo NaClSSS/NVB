@@ -148,3 +148,5 @@ r.py
 *.jpg
 *.csv
 *.npz
+push.bat
+pull.bat
